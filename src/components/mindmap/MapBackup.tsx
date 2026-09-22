@@ -3,9 +3,9 @@
 import { Download, Upload } from "lucide-react";
 import { useRef } from "react";
 
-import type { Edge, Node } from "@xyflow/react";
+import type { Edge } from "@xyflow/react";
 
-import type { MindMapNodeData } from "@/types/mindmap";
+import type { MindMapNode } from "@/types/mindmap";
 
 import { useMindMapStore } from "@/stores/mindmap-store";
 
@@ -64,7 +64,7 @@ export default function MapBackup() {
 				throw new Error("Invalid backup");
 			}
 
-			setNodes(backup.nodes as Node<MindMapNodeData>[]);
+			setNodes(backup.nodes as MindMapNode[]);
 
 			setEdges(backup.edges as Edge[]);
 		} catch (error) {

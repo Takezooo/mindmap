@@ -69,10 +69,11 @@ function MindMapFlow() {
 
 	return (
 		<div className="h-full w-full touch-none">
-			<ReactFlow
+			<ReactFlow<MindMapNode>
 				nodes={nodes}
 				edges={edges}
 				nodeTypes={nodeTypes}
+				deleteKeyCode={null}
 				onNodesChange={handleNodesChange}
 				onEdgesChange={handleEdgesChange}
 				onNodeClick={(_, node) => {
@@ -82,7 +83,6 @@ function MindMapFlow() {
 					selectNode(null);
 				}}
 				fitView
-				deleteKeyCode={null}
 			>
 				<Background gap={24} size={1} color="#eadde4" />
 

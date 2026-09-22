@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import type { Node } from "@xyflow/react";
-import type { MindMapNodeData } from "@/types/mindmap";
 import { useMindMapStore } from "@/stores/mindmap-store";
 
+import type { MindMapNode } from "@/types/mindmap";
+
 interface Props {
-	node: Node<MindMapNodeData>;
+	node: MindMapNode;
 	level: number;
 }
 
