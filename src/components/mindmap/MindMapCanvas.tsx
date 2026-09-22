@@ -1,103 +1,166 @@
 "use client";
 
-import {
-	ReactFlow,
-	Background,
-	Controls,
-	MiniMap,
-	ReactFlowProvider,
-	applyNodeChanges,
-	applyEdgeChanges,
-	useReactFlow,
-	type NodeChange,
-	type EdgeChange,
-} from "@xyflow/react";
-
 import { useEffect } from "react";
+
+import {
+  ReactFlow,
+  Background,
+  Controls,
+  MiniMap,
+  ReactFlowProvider,
+  applyNodeChanges,
+  applyEdgeChanges,
+  useReactFlow,
+  type Node,
+  type NodeChange,
+  type EdgeChange,
+} from "@xyflow/react";
 
 import "@xyflow/react/dist/style.css";
 
-import type { MindMapNode } from "@/types/mindmap";
+import MindMapNode from "./MindMapNode";
+
+import type {
+  MindMapNodeData,
+} from "@/types/mindmap";
+
 import { useMindMapStore } from "@/stores/mindmap-store";
 
 const nodeTypes = {
-	mindMap: MindMapNode,
+  mindMap: MindMapNode,
 };
 
 function MindMapFlow() {
-	const nodes = useMindMapStore((state) => state.nodes);
+  const nodes = useMindMapStore(
+    (state) => state.nodes
+  );
 
-	const edges = useMindMapStore((state) => state.edges);
+  const edges = useMindMapStore(
+    (state) => state.edges
+  );
 
-	const selectedNodeId = useMindMapStore((state) => state.selectedNodeId);
+  const selectedNodeId =
+    useMindMapStore(
+      (state) => state.selectedNodeId
+    );
 
-	const setNodes = useMindMapStore((state) => state.setNodes);
+  const setNodes =
+    useMindMapStore(
+      (state) => state.setNodes
+    );
 
-	const setEdges = useMindMapStore((state) => state.setEdges);
+  const setEdges =
+    useMindMapStore(
+      (state) => state.setEdges
+    );
 
-	const selectNode = useMindMapStore((state) => state.selectNode);
+  const selectNode =
+    useMindMapStore(
+      (state) => state.selectNode
+    );
 
-	const { setCenter } = useReactFlow();
+  const { setCenter } =
+    useReactFlow();
 
-	useEffect(() => {
-		if (!selectedNodeId) {
-			return;
-		}
+  useEffect(() => {
+    if (!selectedNodeId) {
+      return;
+    }
 
-		const node = nodes.find((node) => node.id === selectedNodeId);
+    const node = nodes.find(
+      (item) =>
+        item.id === selectedNodeId
+    );
 
-		if (!node) {
-			return;
-		}
+    if (!node) {
+      return;
+    }
 
-		setCenter(node.position.x + 75, node.position.y + 40, {
-			zoom: 1.2,
-			duration: 400,
-		});
-	}, [selectedNodeId, nodes, setCenter]);
+    setCenter(
+      node.position.x + 75,
+      node.position.y + 40,
+      {
+        zoom: 1.2,
+        duration: 400,
+      }
+    );
+  }, [
+    selectedNodeId,
+    nodes,
+    setCenter,
+  ]);
 
-	const handleNodesChange = (changes: NodeChange<MindMapNode>[]) => {
-		const updatedNodes = applyNodeChanges<MindMapNode>(changes, nodes);
-		setNodes(updatedNodes);
-	};
+  const handleNodesChange = (
+    changes: NodeChange<
+      Node<MindMapNodeData>
+    >[]
+  ) => {
+    const updatedNodes =
+      applyNodeChanges<
+        Node<MindMapNodeData>
+      >(
+        changes,
+        nodes
+      );
 
-	const handleEdgesChange = (changes: EdgeChange[]) => {
-		const updatedEdges = applyEdgeChanges(changes, edges);
+    setNodes(updatedNodes);
+  };
 
-		setEdges(updatedEdges);
-	};
+  const handleEdgesChange = (
+    changes: EdgeChange[]
+  ) => {
+    const updatedEdges =
+      applyEdgeChanges(
+        changes,
+        edges
+      );
 
-	return (
-		<div className="h-full w-full touch-none">
-			<ReactFlow<MindMapNode>
-				nodes={nodes}
-				edges={edges}
-				nodeTypes={nodeTypes}
-				deleteKeyCode={null}
-				onNodesChange={handleNodesChange}
-				onEdgesChange={handleEdgesChange}
-				onNodeClick={(_, node) => {
-					selectNode(node.id);
-				}}
-				onPaneClick={() => {
-					selectNode(null);
-				}}
-				fitView
-			>
-				<Background gap={24} size={1} color="#eadde4" />
+    setEdges(updatedEdges);
+  };
 
-				<Controls />
+  return (
+    <div className="h-full w-full touch-none">
+      <ReactFlow<
+        Node<MindMapNodeData>
+      >
+        nodes={nodes}
+        edges={edges}
+        nodeTypes={nodeTypes}
+        deleteKeyCode={null}
+        onNodesChange={
+          handleNodesChange
+        }
+        onEdgesChange={
+          handleEdgesChange
+        }
+        onNodeClick={(_, node) => {
+          selectNode(node.id);
+        }}
+        onPaneClick={() => {
+          selectNode(null);
+        }}
+        fitView
+      >
+        <Background
+          gap={24}
+          size={1}
+          color="#eadde4"
+        />
 
-				<MiniMap nodeColor="#c77d9b" />
-			</ReactFlow>
-		</div>
-	);
+        <Controls />
+
+        <MiniMap
+          nodeColor="#c77d9b"
+        />
+      </ReactFlow>
+    </div>
+  );
 }
 
 export default function MindMapCanvas() {
-	return (
-		<ReactFlowProvider>
-			<MindMapFlow />
-		</ReactFlowProvider>
-	);
+  return (
+    <ReactFlowProvider>
+      <MindMapFlow />
+    </ReactFlowProvider>
+  );
 }

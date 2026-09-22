@@ -1,5 +1,3 @@
-import type { Node } from "@xyflow/react";
-
 export type NodeShape =
   | "rectangle"
   | "rounded"
@@ -23,8 +21,3 @@ export type MindMapNodeData = {
   maxChildren: number;
   parentId: string | null;
 };
-
-export type MindMapNode = Node<
-  MindMapNodeData,
-  "mindMap"
->;
