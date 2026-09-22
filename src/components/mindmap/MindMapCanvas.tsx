@@ -17,7 +17,7 @@ import { useEffect } from "react";
 
 import "@xyflow/react/dist/style.css";
 
-import MindMapNode from "./MindMapNode";
+import type { MindMapNode } from "@/types/mindmap";
 import { useMindMapStore } from "@/stores/mindmap-store";
 
 const nodeTypes = {
@@ -56,9 +56,8 @@ function MindMapFlow() {
 		});
 	}, [selectedNodeId, nodes, setCenter]);
 
-	const handleNodesChange = (changes: NodeChange[]) => {
-		const updatedNodes = applyNodeChanges(changes, nodes);
-
+	const handleNodesChange = (changes: NodeChange<MindMapNode>[]) => {
+		const updatedNodes = applyNodeChanges<MindMapNode>(changes, nodes);
 		setNodes(updatedNodes);
 	};
 

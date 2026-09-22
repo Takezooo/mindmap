@@ -1,3 +1,5 @@
+import type { Node } from "@xyflow/react";
+
 export type NodeShape =
   | "rectangle"
   | "rounded"
@@ -13,11 +15,16 @@ export type NodeColor =
   | "blue"
   | "cream";
 
-export interface MindMapNodeData {
+export type MindMapNodeData = {
   title: string;
   description: string;
   shape: NodeShape;
   color: NodeColor;
   maxChildren: number;
   parentId: string | null;
-}
+};
+
+export type MindMapNode = Node<
+  MindMapNodeData,
+  "mindMap"
+>;
