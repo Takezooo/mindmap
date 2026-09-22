@@ -1,0 +1,23 @@
+export type NodeShape =
+  | "rectangle"
+  | "rounded"
+  | "circle"
+  | "diamond"
+  | "pill";
+
+export type NodeColor =
+  | "rose"
+  | "lavender"
+  | "peach"
+  | "mint"
+  | "blue"
+  | "cream";
+
+export interface MindMapNodeData {
+  title: string;
+  description: string;
+  shape: NodeShape;
+  color: NodeColor;
+  maxChildren: number;
+  parentId: string | null;
+}
