@@ -1,109 +1,244 @@
 "use client";
 
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+
 import {
-  Handle,
-  Position,
-  type NodeProps,
-  type Node,
+	Handle,
+	Position,
+	useReactFlow,
+	type NodeProps,
+	type Node,
 } from "@xyflow/react";
 
 import type { MindMapNodeData } from "@/types/mindmap";
 
-function getShapeClass(
-  shape: MindMapNodeData["shape"]
-) {
-  switch (shape) {
-    case "circle":
-      return "h-32 w-32 rounded-full flex items-center justify-center";
+function getShapeClass(shape: MindMapNodeData["shape"]) {
+	switch (shape) {
+		case "circle":
+			return "min-h-32 min-w-32 rounded-full flex items-center justify-center";
 
-    case "diamond":
-      return "h-32 w-32 rotate-45 flex items-center justify-center";
+		case "diamond":
+			return "min-h-32 min-w-32 rounded-sm rotate-45 flex items-center justify-center";
 
-    case "pill":
-      return "rounded-full";
+		case "pill":
+			return "rounded-full";
 
-    case "rounded":
-      return "rounded-xl";
+		case "rounded":
+			return "rounded-xl";
 
-    case "rectangle":
-    default:
-      return "rounded-lg";
-  }
+		case "rectangle":
+		default:
+			return "rounded-lg";
+	}
 }
 
-function getColorClass(
-  color: MindMapNodeData["color"]
-) {
-  switch (color) {
-    case "rose":
-      return "bg-[#fde8f0] border-[#e8b4c7]";
+function getColorClass(color: MindMapNodeData["color"]) {
+	switch (color) {
+		case "rose":
+			return "bg-[#fde8f0] border-[#e8b4c7]";
 
-    case "lavender":
-      return "bg-[#eee9f7] border-[#c9bce0]";
+		case "lavender":
+			return "bg-[#eee9f7] border-[#c9bce0]";
 
-    case "peach":
-      return "bg-[#fff0e6] border-[#edc6ad]";
+		case "peach":
+			return "bg-[#fff0e6] border-[#edc6ad]";
 
-    case "mint":
-      return "bg-[#e8f5ef] border-[#b9dccb]";
+		case "mint":
+			return "bg-[#e8f5ef] border-[#b9dccb]";
 
-    case "blue":
-      return "bg-[#eaf2fb] border-[#bdd2e8]";
+		case "blue":
+			return "bg-[#eaf2fb] border-[#bdd2e8]";
 
-    case "cream":
-      return "bg-[#fff8df] border-[#ead9a5]";
+		case "cream":
+			return "bg-[#fff8df] border-[#ead9a5]";
 
-    default:
-      return "bg-white border-[#eadde4]";
-  }
+		default:
+			return "bg-white border-[#eadde4]";
+	}
 }
 
 export default function MindMapNode({
-  data,
-  selected,
+	id,
+	data,
+	selected,
 }: NodeProps<Node<MindMapNodeData>>) {
-  const shapeClass = getShapeClass(
-    data.shape
-  );
+	const { updateNodeData } = useReactFlow();
 
-  const colorClass = getColorClass(
-    data.color
-  );
+	const [isEditingTitle, setIsEditingTitle] = useState(false);
 
-  const isDiamond =
-    data.shape === "diamond";
+	const [draftTitle, setDraftTitle] = useState(data.title ?? "");
 
-  return (
-    <div className="relative">
-      <Handle
-        type="target"
-        position={Position.Left}
-        className="!h-3 !w-3 !border-2 !border-white !bg-[#c77d9b]"
-      />
+	const [draftDescription, setDraftDescription] = useState(
+		data.description ?? "",
+	);
 
-      <div
-        className={`min-w-[140px] border px-5 py-3 shadow-sm transition ${shapeClass} ${colorClass} ${
-          selected
-            ? "border-2 border-[#a85f7d] shadow-lg scale-[1.02]"
-            : ""
-        }`}
-      >
-        <div
-          className={
-            isDiamond
-              ? "-rotate-45 text-center font-medium text-[#4b3d46]"
-              : "text-center font-medium text-[#4b3d46]"
-          }
-        >
-          {data.title}
-        </div>
-      </div>
+	const inputRef = useRef<HTMLInputElement>(null);
+	const cancelBlurRef = useRef(false);
 
-      <Handle
-        type="source"
-        position={Position.Right}
-        className="!h-3 !w-3 !border-2 !border-white !bg-[#c77d9b]"
-      />
-    </div>
-  );
+	const shapeClass = getShapeClass(data.shape);
+	const colorClass = getColorClass(data.color);
+
+	const isDiamond = data.shape === "diamond";
+	const descriptionVisible = data.descriptionVisible ?? false;
+
+	useEffect(() => {
+		setDraftTitle(data.title ?? "");
+	}, [data.title]);
+
+	useEffect(() => {
+		setDraftDescription(data.description ?? "");
+	}, [data.description]);
+
+	useEffect(() => {
+		if (isEditingTitle) {
+			inputRef.current?.focus();
+			inputRef.current?.select();
+		}
+	}, [isEditingTitle]);
+
+	function saveTitle() {
+		const nextTitle = draftTitle.trim();
+
+		if (!nextTitle) {
+			setDraftTitle(data.title ?? "");
+			setIsEditingTitle(false);
+			return;
+		}
+
+		if (nextTitle !== data.title) {
+			updateNodeData(id, {
+				title: nextTitle,
+			});
+		}
+
+		setIsEditingTitle(false);
+	}
+
+	function cancelTitleEditing() {
+		cancelBlurRef.current = true;
+
+		setDraftTitle(data.title ?? "");
+		setIsEditingTitle(false);
+
+		inputRef.current?.blur();
+	}
+
+	function handleTitleBlur() {
+		if (cancelBlurRef.current) {
+			cancelBlurRef.current = false;
+			return;
+		}
+
+		saveTitle();
+	}
+
+	function handleTitleKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+		event.stopPropagation();
+
+		if (event.key === "Enter") {
+			event.preventDefault();
+			saveTitle();
+		}
+
+		if (event.key === "Escape") {
+			event.preventDefault();
+			cancelTitleEditing();
+		}
+	}
+
+	function toggleDescription() {
+		updateNodeData(id, {
+			descriptionVisible: !descriptionVisible,
+		});
+	}
+
+	function handleDescriptionChange(value: string) {
+		setDraftDescription(value);
+
+		// Update immediately so Zustand local persistence
+		// can capture the latest description.
+		updateNodeData(id, {
+			description: value,
+		});
+	}
+
+	return (
+		<div className="relative">
+			<Handle
+				type="target"
+				position={Position.Left}
+				className="!h-3 !w-3 !border-2 !border-white !bg-[#c77d9b]"
+			/>
+
+			<div
+				data-node-color={data.color}
+				className={`mindmap-node-card min-w-[140px] border px-5 py-3 shadow-sm transition ${shapeClass} ${colorClass} ${
+					selected
+						? "is-selected border-2 border-[#a85f7d] shadow-lg scale-[1.02]"
+						: ""
+				}`}
+			>
+				<div
+					className={`${
+						isDiamond ? "-rotate-45 " : ""
+					}w-full text-center font-medium`}
+				>
+					{isEditingTitle ? (
+						<input
+							ref={inputRef}
+							type="text"
+							value={draftTitle}
+							onChange={(event) => setDraftTitle(event.target.value)}
+							onBlur={handleTitleBlur}
+							onKeyDown={handleTitleKeyDown}
+							onClick={(event) => event.stopPropagation()}
+							className="nodrag nopan mindmap-node-title w-full min-w-0 bg-transparent text-center font-medium text-[#4b3d46] outline-none"
+							aria-label="Edit node title"
+						/>
+					) : (
+						<button
+							type="button"
+							onClick={() => setIsEditingTitle(true)}
+							className="nodrag nopan mindmap-node-title w-full min-w-0 cursor-text whitespace-pre-wrap break-words bg-transparent text-center font-medium text-[#4b3d46] outline-none"
+							aria-label="Click to edit node title"
+							title="Click to edit"
+						>
+							{data.title || "Untitled node"}
+						</button>
+					)}
+
+					<button
+						type="button"
+						onPointerDown={(event) => event.stopPropagation()}
+						onClick={(event) => {
+							event.stopPropagation();
+							toggleDescription();
+						}}
+						className="nodrag nopan mindmap-node-toggle mt-2 rounded-md px-2 py-1 text-[10px] font-medium text-[#795F9B] transition hover:bg-black/5"
+					>
+						{descriptionVisible ? "Hide description" : "+ Add description"}
+					</button>
+
+					{descriptionVisible && (
+						<textarea
+							value={draftDescription}
+							onChange={(event) => handleDescriptionChange(event.target.value)}
+							onKeyDown={(event) => event.stopPropagation()}
+							onPointerDown={(event) => event.stopPropagation()}
+							placeholder="Write your notes here..."
+							rows={3}
+							className="nodrag nopan mindmap-node-description mt-2 block min-h-16 w-full min-w-0 resize-y rounded-md border border-black/10 bg-white/50 px-2 py-1.5 text-left text-xs leading-relaxed text-[#4b3d46] outline-none focus:border-[#9B7EBD]"
+							aria-label="Node description"
+						/>
+					)}
+				</div>
+			</div>
+
+			<Handle
+				type="source"
+				position={Position.Right}
+				className="!h-3 !w-3 !border-2 !border-white !bg-[#c77d9b]"
+			/>
+		</div>
+	);
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-
+import ThemeToggle from "@/components/theme/ThemeToggle";
 import { Menu, Settings, X } from "lucide-react";
 
 import MindMapCanvas from "@/components/mindmap/MindMapCanvas";
@@ -28,24 +28,26 @@ export default function EditorPage() {
 	const addParent = useMindMapStore((state) => state.addParent);
 
 	return (
-		<main className="h-[100dvh] overflow-hidden bg-[#FAF7FF] text-[#3F3545]">
+		<main className="mindmap-editor h-[100dvh] overflow-hidden bg-[#FAF7FF] text-[#3F3545]">
 			<MindMapDatabaseSync />
 			{/* ========================= */}
 			{/* DESKTOP */}
 			{/* ========================= */}
-
 			<div className="hidden h-full md:flex">
 				{/* LEFT SIDEBAR */}
 
 				<aside className="flex w-72 shrink-0 flex-col border-r border-[#E7DDF0] bg-white">
-					<div className="border-b border-[#E7DDF0] px-5 py-4">
-						<h1 className="text-lg font-semibold text-[#6F527F]">
-							Riri's Mind Map
-						</h1>
+					<div className="flex items-start justify-between gap-2 border-b border-[#E7DDF0] p-4">
+						<div>
+							<h1 className="text-lg font-semibold text-[#6F527F]">
+								Riri's Mind Map
+							</h1>
 
-						<p className="mt-1 text-xs text-[#887B91]">
-							For you review, FIGHTING!
-						</p>
+							<p className="mt-1 text-xs text-[#887B91]">
+								For you review, FIGHTING!
+							</p>
+						</div>
+						<ThemeToggle />
 					</div>
 
 					<div className="border-b border-[#E7DDF0] p-4">
@@ -99,11 +101,9 @@ export default function EditorPage() {
 
 				<NodeProperties />
 			</div>
-
 			{/* ========================= */}
 			{/* MOBILE */}
 			{/* ========================= */}
-
 			<div className="flex h-full flex-col md:hidden">
 				{/* MOBILE HEADER */}
 
@@ -123,16 +123,20 @@ export default function EditorPage() {
 						Riri's Mind Map
 					</h1>
 
-					<button
-						type="button"
-						onClick={() => {
-							setMobilePanel("properties");
-						}}
-						className="rounded-lg p-2 text-[#6F527F] hover:bg-[#F1EAFB]"
-						aria-label="Open properties"
-					>
-						<Settings size={19} />
-					</button>
+					<div className="flex items-center gap-1">
+						<ThemeToggle />
+
+						<button
+							type="button"
+							onClick={() => {
+								setMobilePanel("properties");
+							}}
+							className="rounded-lg p-2 text-[#6F527F] hover:bg-[#F1EAFB]"
+							aria-label="Open properties"
+						>
+							<Settings size={19} />
+						</button>
+					</div>
 				</header>
 
 				{/* MOBILE CANVAS */}
@@ -141,11 +145,9 @@ export default function EditorPage() {
 					<MindMapCanvas />
 				</section>
 			</div>
-
 			{/* ========================= */}
 			{/* MOBILE MAP DRAWER */}
 			{/* ========================= */}
-
 			{mobilePanel === "map" && (
 				<div className="fixed inset-0 z-50 md:hidden">
 					{/* BACKDROP */}
@@ -219,11 +221,9 @@ export default function EditorPage() {
 					</aside>
 				</div>
 			)}
-
 			{/* ========================= */}
 			{/* MOBILE PROPERTIES */}
 			{/* ========================= */}
-
 			{mobilePanel === "properties" && (
 				<div className="fixed inset-0 z-50 md:hidden">
 					<button

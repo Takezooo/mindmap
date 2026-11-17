@@ -16,6 +16,7 @@ export type NodeColor =
 export type MindMapNodeData = {
   title: string;
   description: string;
+  descriptionVisible?: boolean;
   shape: NodeShape;
   color: NodeColor;
   maxChildren: number;
