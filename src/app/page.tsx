@@ -28,7 +28,7 @@ export default function Home() {
         </p>
 
         <Link
-          href="/editor"
+          href="/dashboard"
           className="mt-8 inline-flex items-center justify-center rounded-xl bg-[#9B7EBD] px-7 py-3 text-sm font-semibold text-white shadow-lg shadow-[#9B7EBD]/20 transition hover:bg-[#6F527F] hover:shadow-xl"
         >
           Open Mind Map
