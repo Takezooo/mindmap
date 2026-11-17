@@ -1,41 +1,177 @@
 @import "tailwindcss";
 
 :root {
-  --background: #fffafc;
-  --foreground: #3f3540;
+	--background: #fffafc;
+	--foreground: #3f3540;
 
-  --primary: #eee9f7;
-  --primary-dark: #c0a2f8;
-  --primary-light: #f4eeff;
+	--primary: #eee9f7;
+	--primary-dark: #c0a2f8;
+	--primary-light: #f4eeff;
 
-  --secondary: #a99acb;
-  --secondary-light: #eee9f7;
+	--secondary: #a99acb;
+	--secondary-light: #eee9f7;
 
-  --accent: #e9a9bf;
-  --accent-light: #fdeef3;
+	--accent: #e9a9bf;
+	--accent-light: #fdeef3;
 
-  --border: #eadde4;
-  --muted: #8d7d87;
+	--border: #eadde4;
+	--muted: #8d7d87;
 
-  --canvas: #fcf7fa;
+	--canvas: #fcf7fa;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+	--color-background: var(--background);
+	--color-foreground: var(--foreground);
+	--font-sans: var(--font-geist-sans);
+	--font-mono: var(--font-geist-mono);
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+	:root {
+		--background: #0a0a0a;
+		--foreground: #ededed;
+	}
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+	background: var(--background);
+	color: var(--foreground);
+	font-family: Arial, Helvetica, sans-serif;
+}
+
+/* =========================================
+   DARK MODE - APPLICATION
+========================================= */
+
+html.dark {
+	color-scheme: dark;
+}
+
+.dark .mindmap-editor {
+	background-color: #17131f !important;
+	color: #eee7f5 !important;
+}
+
+/* White panels: sidebars, headers, drawers */
+.dark .mindmap-editor [class~="bg-white"] {
+	background-color: #241e2d !important;
+}
+
+/* Canvas */
+.dark .mindmap-editor [class~="bg-[#F8F4FC]"] {
+	background-color: #191521 !important;
+}
+
+/* Light lavender backgrounds */
+.dark .mindmap-editor [class~="bg-[#FAF7FF]"] {
+	background-color: #282133 !important;
+}
+
+.dark .mindmap-editor [class~="bg-[#F1EAFB]"] {
+	background-color: #352b40 !important;
+}
+
+/* Borders */
+.dark .mindmap-editor [class~="border-[#E7DDF0]"] {
+	border-color: #3b3047 !important;
+}
+
+.dark .mindmap-editor [class~="border-[#DCCBE8]"] {
+	border-color: #51405f !important;
+}
+
+/* Text colors */
+.dark .mindmap-editor [class~="text-[#3F3545]"] {
+	color: #eee7f5 !important;
+}
+
+.dark .mindmap-editor [class~="text-[#6F527F]"] {
+	color: #d9c3ec !important;
+}
+
+.dark .mindmap-editor [class~="text-[#887B91]"] {
+	color: #b8a8c6 !important;
+}
+
+/* Hover backgrounds */
+.dark .mindmap-editor [class~="hover:bg-[#F1EAFB]"]:hover {
+	background-color: #40334e !important;
+}
+
+/* =========================================
+   DARK MODE - MIND MAP NODES
+========================================= */
+
+.dark .mindmap-node-card[data-node-color="rose"] {
+	background-color: #3a2933;
+	border-color: #81566c;
+}
+
+.dark .mindmap-node-card[data-node-color="lavender"] {
+	background-color: #30283c;
+	border-color: #6c5b83;
+}
+
+.dark .mindmap-node-card[data-node-color="peach"] {
+	background-color: #3c3029;
+	border-color: #84644f;
+}
+
+.dark .mindmap-node-card[data-node-color="mint"] {
+	background-color: #293831;
+	border-color: #587968;
+}
+
+.dark .mindmap-node-card[data-node-color="blue"] {
+	background-color: #293443;
+	border-color: #566d8a;
+}
+
+.dark .mindmap-node-card[data-node-color="cream"] {
+	background-color: #3b3627;
+	border-color: #81734a;
+}
+
+.dark .mindmap-node-card:not([data-node-color]) {
+	background-color: #302b39;
+	border-color: #5b5065;
+}
+
+/* Node titles and descriptions */
+.dark .mindmap-node-card .mindmap-node-title,
+.dark .mindmap-node-card .mindmap-node-description {
+	color: #f4edf9;
+}
+
+.dark .mindmap-node-card .mindmap-node-description {
+	background-color: rgb(0 0 0 / 15%);
+	border-color: #61536e;
+}
+
+.dark .mindmap-node-description::placeholder {
+	color: #b4a6c1;
+}
+
+.dark .mindmap-node-toggle {
+	color: #dfc5f4;
+}
+
+.dark .mindmap-node-toggle:hover {
+	background-color: rgb(255 255 255 / 10%);
+}
+
+/* Selected node */
+.dark .mindmap-node-card.is-selected {
+	border-color: #c7a6ea;
+	box-shadow:
+		0 0 0 2px rgb(199 166 234 / 15%),
+		0 8px 20px rgb(0 0 0 / 25%);
+}
+
+/* Keyboard focus */
+.dark .mindmap-node-card .mindmap-node-title:focus-visible,
+.dark .mindmap-node-card .mindmap-node-description:focus-visible {
+	outline: 2px solid #c7a6ea;
+	outline-offset: 3px;
 }
