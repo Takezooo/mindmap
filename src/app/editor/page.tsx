@@ -56,13 +56,8 @@ export default function EditorPage() {
 						<div className="mt-3 grid grid-cols-2 gap-2">
 							<button
 								type="button"
-								onClick={() => {
-									if (selectedNodeId) {
-										addParent(selectedNodeId);
-									}
-								}}
-								disabled={!selectedNodeId}
-								className="rounded-lg border border-[#DCCBE8] bg-[#FAF7FF] px-3 py-2.5 text-sm font-medium text-[#6F527F] hover:bg-[#F1EAFB] disabled:cursor-not-allowed disabled:opacity-40"
+								onClick={() => addParent(selectedNodeId ?? undefined)}
+								className="rounded-lg border border-[#DCCBE8] bg-[#FAF7FF] px-3 py-2.5 text-sm font-medium text-[#6F527F] hover:bg-[#F1EAFB]"
 							>
 								+ Parent
 							</button>
@@ -191,12 +186,10 @@ export default function EditorPage() {
 								<button
 									type="button"
 									onClick={() => {
-										if (selectedNodeId) {
-											addParent(selectedNodeId);
-										}
+										addParent(selectedNodeId ?? undefined);
+										setMobilePanel(null);
 									}}
-									disabled={!selectedNodeId}
-									className="rounded-lg border border-[#DCCBE8] bg-[#FAF7FF] px-3 py-2.5 text-sm font-medium text-[#6F527F] hover:bg-[#F1EAFB] disabled:opacity-40"
+									className="rounded-lg border border-[#DCCBE8] bg-[#FAF7FF] px-3 py-2.5 text-sm font-medium text-[#6F527F] hover:bg-[#F1EAFB]"
 								>
 									+ Parent
 								</button>

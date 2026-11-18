@@ -13,6 +13,7 @@ import {
 	useReactFlow,
 	type Node,
 	type Edge,
+	type Connection,
 	type NodeChange,
 	type EdgeChange,
 } from "@xyflow/react";
@@ -20,26 +21,24 @@ import {
 import "@xyflow/react/dist/style.css";
 
 import MindMapNode from "./MindMapNode";
-
 import type { MindMapNodeData } from "@/types/mindmap";
-
 import { useMindMapStore } from "@/stores/mindmap-store";
 
 const nodeTypes = {
 	mindMap: MindMapNode,
 };
 
+// Prevent the same keyboard event from being processed
+// by multiple mounted MindMapFlow instances.
+const handledKeyboardEvents = new WeakSet<globalThis.KeyboardEvent>();
+
 function MindMapFlow() {
 	const nodes = useMindMapStore((state) => state.nodes);
-
 	const edges = useMindMapStore((state) => state.edges);
-
 	const selectedNodeId = useMindMapStore((state) => state.selectedNodeId);
 
 	const setNodes = useMindMapStore((state) => state.setNodes);
-
 	const setEdges = useMindMapStore((state) => state.setEdges);
-
 	const selectNode = useMindMapStore((state) => state.selectNode);
 
 	const { setCenter, getNode } = useReactFlow();
@@ -50,9 +49,10 @@ function MindMapFlow() {
 	} | null>(null);
 
 	useEffect(() => {
-		function handleHistoryShortcut(event: globalThis.KeyboardEvent) {
+		function handleKeyboardShortcuts(event: globalThis.KeyboardEvent) {
 			const target = event.target;
 
+			// Do not intercept shortcuts while editing text.
 			if (
 				target instanceof HTMLElement &&
 				(target.isContentEditable ||
@@ -61,58 +61,105 @@ function MindMapFlow() {
 				return;
 			}
 
-			// Delete the currently selected node.
-			if (event.key === "Delete" || event.key === "Backspace") {
-				const state = useMindMapStore.getState();
+			// Prevent duplicate handling across canvas instances.
+			if (handledKeyboardEvents.has(event)) return;
+			handledKeyboardEvents.add(event);
 
-				if (state.selectedNodeId) {
-					event.preventDefault();
-					state.deleteNode(state.selectedNodeId);
+			// Ignore operating-system key repeat.
+			if (event.repeat) return;
+
+			const state = useMindMapStore.getState();
+			const modifier = event.ctrlKey || event.metaKey;
+			const key = event.key.toLowerCase();
+
+			// SHIFT + TAB: Add parent.
+			// Without a selection, create an independent root node.
+			if (event.key === "Tab" && event.shiftKey) {
+				event.preventDefault();
+				event.stopPropagation();
+
+				state.addParent(state.selectedNodeId ?? undefined);
+				return;
+			}
+
+			// TAB: Add child.
+			if (event.key === "Tab") {
+				if (!state.selectedNodeId) return;
+
+				event.preventDefault();
+				event.stopPropagation();
+
+				state.addChild(state.selectedNodeId);
+				return;
+			}
+
+			// ENTER: Add sibling.
+			if (event.key === "Enter") {
+				if (!state.selectedNodeId) return;
+
+				event.preventDefault();
+				event.stopPropagation();
+
+				state.addSibling(state.selectedNodeId);
+				return;
+			}
+
+			// CTRL + A / CMD + A: Select all nodes.
+			if (modifier && key === "a") {
+				event.preventDefault();
+				event.stopPropagation();
+
+				state.setNodes(
+					state.nodes.map((node) => ({
+						...node,
+						selected: true,
+					})),
+				);
+
+				return;
+			}
+
+			// DELETE / BACKSPACE: Delete selected node.
+			if (event.key === "Delete" || event.key === "Backspace") {
+				if (!state.selectedNodeId) return;
+
+				event.preventDefault();
+				event.stopPropagation();
+
+				state.deleteNode(state.selectedNodeId);
+				return;
+			}
+
+			// CTRL + Z / CMD + Z: Undo.
+			// CTRL + SHIFT + Z / CMD + SHIFT + Z: Redo.
+			if (modifier && key === "z") {
+				event.preventDefault();
+				event.stopPropagation();
+
+				const history = useMindMapStore.temporal.getState();
+
+				if (event.shiftKey) {
+					history.redo();
+				} else {
+					history.undo();
 				}
 
 				return;
 			}
-      
-			const modifier = event.ctrlKey || event.metaKey;
 
-			if (!modifier || event.key.toLowerCase() !== "z") {
-				return;
-			}
-
-			event.preventDefault();
-
-			const history = useMindMapStore.temporal.getState();
-
-			if (event.shiftKey) {
-				history.redo();
-			} else {
-				history.undo();
-			}
-		}
-
-		function handleRedoShortcut(event: globalThis.KeyboardEvent) {
-			const target = event.target;
-
-			if (
-				target instanceof HTMLElement &&
-				(target.isContentEditable ||
-					["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName))
-			) {
-				return;
-			}
-
-			if (event.ctrlKey && event.key.toLowerCase() === "y") {
+			// CTRL + Y: Redo.
+			if (event.ctrlKey && key === "y") {
 				event.preventDefault();
+				event.stopPropagation();
+
 				useMindMapStore.temporal.getState().redo();
 			}
 		}
 
-		window.addEventListener("keydown", handleHistoryShortcut);
-		window.addEventListener("keydown", handleRedoShortcut);
+		window.addEventListener("keydown", handleKeyboardShortcuts);
 
 		return () => {
-			window.removeEventListener("keydown", handleHistoryShortcut);
-			window.removeEventListener("keydown", handleRedoShortcut);
+			window.removeEventListener("keydown", handleKeyboardShortcuts);
 		};
 	}, []);
 
@@ -150,22 +197,18 @@ function MindMapFlow() {
 	function handleNodeDragStart() {
 		const state = useMindMapStore.getState();
 
-		// Capture the graph before movement begins.
 		dragStartSnapshot.current = {
 			nodes: state.nodes,
 			edges: state.edges,
 		};
 
-		// Ignore all intermediate drag positions in history.
 		useMindMapStore.temporal.getState().pause();
 	}
 
 	function handleNodeDragStop() {
 		const before = dragStartSnapshot.current;
-
 		const history = useMindMapStore.temporal;
 
-		// Resume normal history tracking.
 		history.getState().resume();
 
 		dragStartSnapshot.current = null;
@@ -174,7 +217,6 @@ function MindMapFlow() {
 
 		const current = useMindMapStore.getState();
 
-		// Check whether any node actually changed position.
 		const hasMoved = before.nodes.some((previousNode) => {
 			const currentNode = current.nodes.find(
 				(node) => node.id === previousNode.id,
@@ -189,11 +231,22 @@ function MindMapFlow() {
 
 		if (!hasMoved) return;
 
-		// Save the original graph as one undo entry.
 		history.setState((state) => ({
 			pastStates: [...state.pastStates, before].slice(-100),
 			futureStates: [],
 		}));
+	}
+
+	function handleReconnect(oldEdge: Edge, newConnection: Connection) {
+		if (!newConnection.source || !newConnection.target) return;
+
+		if (newConnection.target !== oldEdge.target) return;
+
+		if (newConnection.source === oldEdge.source) return;
+
+		useMindMapStore
+			.getState()
+			.reparentNode(oldEdge.target, newConnection.source);
 	}
 
 	return (
@@ -203,6 +256,8 @@ function MindMapFlow() {
 				edges={edges}
 				nodeTypes={nodeTypes}
 				deleteKeyCode={null}
+				edgesReconnectable={true}
+				onReconnect={handleReconnect}
 				onNodesChange={handleNodesChange}
 				onEdgesChange={handleEdgesChange}
 				onNodeDragStart={handleNodeDragStart}
@@ -216,9 +271,7 @@ function MindMapFlow() {
 				fitView
 			>
 				<Background gap={24} size={1} color="#eadde4" />
-
 				<Controls />
-
 				<MiniMap nodeColor="#c77d9b" />
 			</ReactFlow>
 		</div>

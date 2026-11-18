@@ -11,28 +11,25 @@ interface MindMapState {
 
 	selectedNodeId: string | null;
 	descriptionNodeId: string | null;
-
 	hasHydrated: boolean;
 
 	setNodes: (nodes: Node<MindMapNodeData>[]) => void;
-
 	setEdges: (edges: Edge[]) => void;
 
 	selectNode: (nodeId: string | null) => void;
-
 	openDescription: (nodeId: string) => void;
-
 	closeDescription: () => void;
-
 	setHasHydrated: (value: boolean) => void;
 
 	addChild: (parentId: string) => void;
-
-	addParent: (nodeId: string) => void;
+	addSibling: (nodeId: string) => void;
+	addParent: (nodeId?: string) => void;
 
 	updateNode: (nodeId: string, data: Partial<MindMapNodeData>) => void;
 
 	deleteNode: (nodeId: string) => void;
+
+	reparentNode: (childId: string, newParentId: string) => void;
 
 	replaceMap: (nodes: Node<MindMapNodeData>[], edges: Edge[]) => void;
 }
@@ -87,10 +84,7 @@ export const useMindMapStore = create<MindMapState>()(
 					{
 						id: "1",
 						type: "mindMap",
-						position: {
-							x: 300,
-							y: 250,
-						},
+						position: { x: 300, y: 250 },
 						data: {
 							title: "Viktor",
 							description:
@@ -104,10 +98,7 @@ export const useMindMapStore = create<MindMapState>()(
 					{
 						id: "2",
 						type: "mindMap",
-						position: {
-							x: 600,
-							y: 250,
-						},
+						position: { x: 600, y: 250 },
 						data: {
 							title: "Sorry",
 							description: "if late na...",
@@ -131,55 +122,36 @@ export const useMindMapStore = create<MindMapState>()(
 				descriptionNodeId: null,
 				hasHydrated: false,
 
-				setNodes: (nodes) => {
-					set({ nodes });
-				},
+				setNodes: (nodes) => set({ nodes }),
 
-				setEdges: (edges) => {
-					set({ edges });
-				},
+				setEdges: (edges) => set({ edges }),
 
-				selectNode: (nodeId) => {
+				selectNode: (nodeId) =>
 					set({
 						selectedNodeId: nodeId,
 						descriptionNodeId: null,
-					});
-				},
+					}),
 
-				openDescription: (nodeId) => {
+				openDescription: (nodeId) =>
 					set({
 						selectedNodeId: nodeId,
 						descriptionNodeId: nodeId,
-					});
-				},
+					}),
 
-				closeDescription: () => {
-					set({
-						descriptionNodeId: null,
-					});
-				},
+				closeDescription: () => set({ descriptionNodeId: null }),
 
-				setHasHydrated: (value) => {
-					set({
-						hasHydrated: value,
-					});
-				},
+				setHasHydrated: (value) => set({ hasHydrated: value }),
 
+				// Add a child connected to its selected parent.
 				addChild: (parentId) =>
 					set((state) => {
 						const parent = state.nodes.find((node) => node.id === parentId);
 
-						if (!parent) {
-							return state;
-						}
+						if (!parent) return state;
 
 						const children = state.nodes.filter(
 							(node) => node.data.parentId === parentId,
 						);
-
-						if (children.length >= parent.data.maxChildren) {
-							return state;
-						}
 
 						const id = crypto.randomUUID();
 
@@ -208,24 +180,100 @@ export const useMindMapStore = create<MindMapState>()(
 
 						return {
 							nodes: [...state.nodes, child],
-
 							edges: [...state.edges, edge],
-
 							selectedNodeId: id,
 							descriptionNodeId: null,
 						};
 					}),
 
-				addParent: (nodeId) =>
+				// Add a sibling under the same parent.
+				// If the selected node is a root, create another independent root.
+				addSibling: (nodeId) =>
 					set((state) => {
 						const currentNode = state.nodes.find((node) => node.id === nodeId);
 
-						if (!currentNode) {
-							return state;
+						if (!currentNode) return state;
+
+						const parentId = currentNode.data.parentId;
+
+						const siblings = state.nodes.filter(
+							(node) => node.data.parentId === parentId,
+						);
+
+						const id = crypto.randomUUID();
+
+						const newNode: Node<MindMapNodeData> = {
+							id,
+							type: "mindMap",
+							position: {
+								x: currentNode.position.x,
+								y: currentNode.position.y + 140,
+							},
+							data: {
+								title: "New Node",
+								description: "",
+								shape: "rectangle",
+								color: "peach",
+								maxChildren: 3,
+								parentId,
+							},
+						};
+
+						const newEdges = parentId
+							? [
+									...state.edges,
+									{
+										id: `${parentId}-${id}`,
+										source: parentId,
+										target: id,
+									},
+								]
+							: state.edges;
+
+						return {
+							nodes: [...state.nodes, newNode],
+							edges: newEdges,
+							selectedNodeId: id,
+							descriptionNodeId: null,
+						};
+					}),
+
+				// With no nodeId, create an independent root node.
+				// With a nodeId, insert a new parent above that node.
+				addParent: (nodeId) =>
+					set((state) => {
+						if (!nodeId) {
+							const id = crypto.randomUUID();
+
+							const rootNode: Node<MindMapNodeData> = {
+								id,
+								type: "mindMap",
+								position: {
+									x: 300 + state.nodes.length * 40,
+									y: 250 + state.nodes.length * 40,
+								},
+								data: {
+									title: "New Parent",
+									description: "",
+									shape: "rounded",
+									color: "rose",
+									maxChildren: 3,
+									parentId: null,
+								},
+							};
+
+							return {
+								nodes: [...state.nodes, rootNode],
+								selectedNodeId: id,
+								descriptionNodeId: null,
+							};
 						}
 
-						const oldParentId = currentNode.data.parentId;
+						const currentNode = state.nodes.find((node) => node.id === nodeId);
 
+						if (!currentNode) return state;
+
+						const oldParentId = currentNode.data.parentId;
 						const oldParent = oldParentId
 							? state.nodes.find((node) => node.id === oldParentId)
 							: null;
@@ -238,15 +286,12 @@ export const useMindMapStore = create<MindMapState>()(
 							position: oldParent
 								? {
 										x: (oldParent.position.x + currentNode.position.x) / 2,
-
 										y: (oldParent.position.y + currentNode.position.y) / 2,
 									}
 								: {
 										x: currentNode.position.x - 300,
-
 										y: currentNode.position.y,
 									},
-
 							data: {
 								title: "New Parent",
 								description: "",
@@ -259,24 +304,18 @@ export const useMindMapStore = create<MindMapState>()(
 
 						const updatedCurrentNode: Node<MindMapNodeData> = {
 							...currentNode,
-
 							data: {
 								...currentNode.data,
 								parentId: newParentId,
 							},
 						};
 
-						let updatedEdges = [...state.edges];
-
-						if (oldParentId) {
-							updatedEdges = updatedEdges.filter(
-								(edge) =>
-									!(
-										edge.source === oldParentId &&
-										edge.target === currentNode.id
-									),
-							);
-						}
+						let updatedEdges = state.edges.filter(
+							(edge) =>
+								!(
+									edge.source === oldParentId && edge.target === currentNode.id
+								),
+						);
 
 						if (oldParentId) {
 							updatedEdges.push({
@@ -297,52 +336,43 @@ export const useMindMapStore = create<MindMapState>()(
 								...state.nodes.map((node) =>
 									node.id === currentNode.id ? updatedCurrentNode : node,
 								),
-
 								newParent,
 							],
-
 							edges: updatedEdges,
-
 							selectedNodeId: newParentId,
-
 							descriptionNodeId: null,
 						};
 					}),
 
 				updateNode: (nodeId, data) =>
 					set((state) => ({
-						nodes: state.nodes.map((node) => {
-							if (node.id !== nodeId) {
-								return node;
-							}
-
-							return {
-								...node,
-
-								data: {
-									...node.data,
-									...data,
-								},
-							};
-						}),
+						nodes: state.nodes.map((node) =>
+							node.id === nodeId
+								? {
+										...node,
+										data: {
+											...node.data,
+											...data,
+										},
+									}
+								: node,
+						),
 					})),
 
+				// Delete only the selected node.
+				// Reassign its direct children to its former parent.
 				deleteNode: (nodeId) =>
 					set((state) => {
 						const node = state.nodes.find((item) => item.id === nodeId);
 
-						if (!node) {
-							return state;
-						}
+						if (!node) return state;
 
 						const newParentId = node.data.parentId;
 
-						// Find only the direct children of the selected node.
 						const directChildren = state.nodes.filter(
 							(item) => item.data.parentId === nodeId,
 						);
 
-						// Remove the selected node and reassign its direct children.
 						const updatedNodes = state.nodes
 							.filter((item) => item.id !== nodeId)
 							.map((item) => {
@@ -359,12 +389,10 @@ export const useMindMapStore = create<MindMapState>()(
 								};
 							});
 
-						// Remove connections involving the deleted node.
 						const updatedEdges = state.edges.filter(
 							(edge) => edge.source !== nodeId && edge.target !== nodeId,
 						);
 
-						// Reconnect direct children to the deleted node's parent.
 						if (newParentId) {
 							directChildren.forEach((child) => {
 								updatedEdges.push({
@@ -383,16 +411,66 @@ export const useMindMapStore = create<MindMapState>()(
 						};
 					}),
 
-				replaceMap: (nodes, edges) => {
+				// Transfer a child to another parent.
+				reparentNode: (childId, newParentId) =>
+					set((state) => {
+						const child = state.nodes.find((node) => node.id === childId);
+
+						const newParent = state.nodes.find(
+							(node) => node.id === newParentId,
+						);
+
+						if (!child || !newParent) return state;
+
+						if (childId === newParentId) return state;
+
+						// Prevent circular relationships.
+						let ancestorId: string | null = newParentId;
+
+						while (ancestorId) {
+							if (ancestorId === childId) return state;
+
+							const ancestor = state.nodes.find(
+								(node) => node.id === ancestorId,
+							);
+
+							ancestorId = ancestor?.data.parentId ?? null;
+						}
+
+						const updatedEdges = state.edges.filter(
+							(edge) => edge.target !== childId,
+						);
+
+						updatedEdges.push({
+							id: `${newParentId}-${childId}`,
+							source: newParentId,
+							target: childId,
+						});
+
+						return {
+							nodes: state.nodes.map((node) =>
+								node.id === childId
+									? {
+											...node,
+											data: {
+												...node.data,
+												parentId: newParentId,
+											},
+										}
+									: node,
+							),
+							edges: updatedEdges,
+						};
+					}),
+
+				replaceMap: (nodes, edges) =>
 					set({
 						nodes,
 						edges,
 						selectedNodeId: null,
 						descriptionNodeId: null,
-					});
-				},
+					}),
 			}),
-
 			{
 				name: "mindmap-storage-v1",
 				storage: createJSONStorage(() => localStorage),
