@@ -175,3 +175,184 @@ html.dark {
 	outline: 2px solid #c7a6ea;
 	outline-offset: 3px;
 }
+
+/* =========================================
+   DARK MODE - DASHBOARD
+========================================= */
+
+.dark .dashboard-page {
+	background-color: #17131f !important;
+	color: #eee7f5 !important;
+}
+
+/* Main panels and cards */
+.dark .dashboard-page [class~="bg-white"] {
+	background-color: #241e2d !important;
+}
+
+/* Light backgrounds */
+.dark .dashboard-page [class*="bg-[#FAF7FF]"] {
+	background-color: #282133 !important;
+}
+
+.dark .dashboard-page [class*="bg-[#F8F4FC]"] {
+	background-color: #211b2a !important;
+}
+
+.dark .dashboard-page [class*="bg-[#F1EAFB]"] {
+	background-color: #352b40 !important;
+}
+
+.dark .dashboard-page [class*="bg-white/70"] {
+	background-color: rgb(36 30 45 / 70%) !important;
+}
+
+/* Borders */
+.dark .dashboard-page [class*="border-[#E7DDF0]"],
+.dark .dashboard-page [class*="border-[#DCCBE8]"],
+.dark .dashboard-page [class*="border-[#EADDE4]"] {
+	border-color: #493b55 !important;
+}
+
+/* Text */
+.dark .dashboard-page [class*="text-[#3F3545]"],
+.dark .dashboard-page [class*="text-[#493C55]"] {
+	color: #eee7f5 !important;
+}
+
+.dark .dashboard-page [class*="text-[#6F527F]"],
+.dark .dashboard-page [class*="text-[#795F9B]"] {
+	color: #d9c3ec !important;
+}
+
+.dark .dashboard-page [class*="text-[#776B83]"],
+.dark .dashboard-page [class*="text-[#887B91]"],
+.dark .dashboard-page [class*="text-[#A299AA]"] {
+	color: #b8a8c6 !important;
+}
+
+/* Inputs and selects */
+.dark .dashboard-page input,
+.dark .dashboard-page select {
+	background-color: #211b2a;
+	border-color: #493b55;
+	color: #eee7f5;
+}
+
+.dark .dashboard-page input::placeholder {
+	color: #a99bb5;
+}
+
+.dark .dashboard-page select option {
+	background-color: #241e2d;
+	color: #eee7f5;
+}
+
+/* Hover backgrounds */
+.dark .dashboard-page [class*="hover:bg-[#FAF7FF]"]:hover,
+.dark .dashboard-page [class*="hover:bg-[#F8F4FC]"]:hover,
+.dark .dashboard-page [class*="hover:bg-[#F1EAFB]"]:hover {
+	background-color: #40334e !important;
+}
+
+/* Dashed empty states */
+.dark .dashboard-page [class*="border-dashed"] {
+	border-color: #51405f !important;
+}
+
+/* Feedback messages */
+.dark .dashboard-page [role="alert"] {
+	background-color: #3b2633;
+	border-color: #81566c;
+	color: #f0c5d5;
+}
+
+.dark .dashboard-page [role="status"] {
+	background-color: #352b40;
+	border-color: #51405f;
+	color: #dfc5f4;
+}
+
+/* Modal and mobile drawer */
+.dark .dashboard-page [role="dialog"],
+.dark .dashboard-page aside {
+	background-color: #241e2d;
+	border-color: #493b55;
+}
+
+/* Dashboard theme variables */
+.dashboard-page {
+	--dashboard-bg: #faf7ff;
+	--dashboard-surface: #ffffff;
+	--dashboard-input: #faf7ff;
+	--dashboard-text: #3f3545;
+	--dashboard-muted: #887b91;
+	--dashboard-border: #e7ddf0;
+	--dashboard-hover: #f1eafb;
+}
+
+.dark .dashboard-page {
+	--dashboard-bg: #17131f;
+	--dashboard-surface: #241e2d;
+	--dashboard-input: #211b2a;
+	--dashboard-text: #eee7f5;
+	--dashboard-muted: #b8a8c6;
+	--dashboard-border: #493b55;
+	--dashboard-hover: #40334e;
+
+	background-color: var(--dashboard-bg) !important;
+	color: var(--dashboard-text) !important;
+}
+
+.dark .dashboard-page .dashboard-surface {
+	background-color: var(--dashboard-surface) !important;
+}
+
+.dark .dashboard-page .dashboard-input {
+	background-color: var(--dashboard-input) !important;
+	color: var(--dashboard-text) !important;
+	border-color: var(--dashboard-border) !important;
+}
+
+.dark .dashboard-page .dashboard-border {
+	border-color: var(--dashboard-border) !important;
+}
+
+.dark .dashboard-page .dashboard-muted {
+	color: var(--dashboard-muted) !important;
+}
+
+.dark .dashboard-page .dashboard-hover:hover {
+	background-color: var(--dashboard-hover) !important;
+}
+
+/* =========================================
+   DARK MODE - LANDING PAGE
+========================================= */
+
+.dark .landing-page {
+	background-color: #17131f !important;
+	color: #eee7f5 !important;
+}
+
+.dark .landing-page h1 {
+	color: #dfc5f4 !important;
+}
+
+.dark .landing-page p {
+	color: #b8a8c6 !important;
+}
+
+.dark .landing-page .landing-glow-one {
+	background-color: #352b40 !important;
+	opacity: 0.7;
+}
+
+.dark .landing-page .landing-glow-two {
+	background-color: #422b3b !important;
+	opacity: 0.6;
+}
+
+.dark .landing-page a {
+	box-shadow: 0 8px 24px rgb(0 0 0 / 20%);
+}

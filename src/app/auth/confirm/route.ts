@@ -29,7 +29,7 @@ export async function GET(
     request.nextUrl.clone();
 
   redirectTo.pathname =
-    "/editor";
+    "/dashboard";
 
   redirectTo.searchParams.delete(
     "token_hash"
