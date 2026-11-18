@@ -9,7 +9,7 @@ import MindMapCanvas from "@/components/mindmap/MindMapCanvas";
 import NodeProperties from "@/components/mindmap/NodeProperties";
 
 import MindMapDatabaseSync from "@/components/mindmap/MindMapDatabaseSync";
-
+import UndoRedoControls from "@/components/mindmap/UndoRedoControls";
 import MapTree from "@/components/sidebar/MapTree";
 
 import MapBackup from "@/components/mindmap/MapBackup";
@@ -79,6 +79,7 @@ export default function EditorPage() {
 							>
 								+ Child
 							</button>
+							<UndoRedoControls />
 						</div>
 					</div>
 

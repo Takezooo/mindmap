@@ -1536,7 +1536,7 @@ export default function DashboardPage() {
 
         <div className="border-b border-[#E7DDF0] px-5 py-5">
           <h2 className="text-xl font-bold text-[#6F527F]">
-            MindMap
+            Riri's MindMap
           </h2>
 
           <p className="mt-1 text-xs text-[#887B91]">
