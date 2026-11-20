@@ -167,7 +167,6 @@ export const useMindMapStore = create<MindMapState>()(
 								description: "",
 								shape: "rectangle",
 								color: "peach",
-								maxChildren: 3,
 								parentId,
 							},
 						};
@@ -214,7 +213,6 @@ export const useMindMapStore = create<MindMapState>()(
 								description: "",
 								shape: "rectangle",
 								color: "peach",
-								maxChildren: 3,
 								parentId,
 							},
 						};
@@ -257,7 +255,6 @@ export const useMindMapStore = create<MindMapState>()(
 									description: "",
 									shape: "rounded",
 									color: "rose",
-									maxChildren: 3,
 									parentId: null,
 								},
 							};
@@ -297,7 +294,6 @@ export const useMindMapStore = create<MindMapState>()(
 								description: "",
 								shape: "rounded",
 								color: "rose",
-								maxChildren: 3,
 								parentId: oldParentId,
 							},
 						};

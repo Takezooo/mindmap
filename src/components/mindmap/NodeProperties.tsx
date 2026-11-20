@@ -166,31 +166,6 @@ export default function NodeProperties() {
 					</div>
 				</div>
 
-				{/* MAX CHILDREN */}
-				<div>
-					<label
-						htmlFor="node-max-children"
-						className="mb-1.5 block text-sm font-medium"
-					>
-						Maximum Children
-					</label>
-
-					<input
-						id="node-max-children"
-						type="number"
-						min={0}
-						value={node.data.maxChildren}
-						onChange={(event) => {
-							const value = Number(event.target.value);
-
-							updateNode(node.id, {
-								maxChildren: Math.max(0, value),
-							});
-						}}
-						className="w-full rounded-lg border border-[#eadde4] bg-[#fffafc] px-3 py-2 text-sm outline-none focus:border-[#c77d9b] focus:ring-2 focus:ring-[#f6dce7]"
-					/>
-				</div>
-
 				{/* DELETE */}
 				<div className="border-t border-[#eadde4] pt-5">
 					<button

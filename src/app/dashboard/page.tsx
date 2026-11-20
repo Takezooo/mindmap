@@ -942,8 +942,7 @@ export default function DashboardPage() {
 
 	if (loading) {
 		return (
-			<main className="dashboard-page min-h-[100dvh] bg-[#FAF7FF] text-[#3F3545]">
-				{" "}
+			<main className="dashboard-page flex items-center justify-center min-h-[100dvh] bg-[#FAF7FF] text-[#3F3545]">
 				<div className="text-center">
 					<div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-[#E7DDF0] border-t-[#9B7EBD]" />
 

@@ -1,28 +1,21 @@
 "use client";
 
 import { useState, type SubmitEvent } from "react";
-
 import Link from "next/link";
-
 import { useRouter } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/client";
+import ThemeToggle from "@/components/theme/ThemeToggle";
 
 export default function LoginPage() {
 	const router = useRouter();
-
 	const supabase = createClient();
 
 	const [mode, setMode] = useState<"login" | "signup">("login");
-
 	const [email, setEmail] = useState("");
-
 	const [password, setPassword] = useState("");
-
 	const [loading, setLoading] = useState(false);
-
 	const [message, setMessage] = useState("");
-
 	const [error, setError] = useState("");
 
 	const handleSubmit = async (event: SubmitEvent<HTMLFormElement>) => {
@@ -41,13 +34,11 @@ export default function LoginPage() {
 
 				if (loginError) {
 					setError(loginError.message);
-
 					return;
 				}
 
 				router.push("/dashboard");
 				router.refresh();
-
 				return;
 			}
 
@@ -58,21 +49,18 @@ export default function LoginPage() {
 
 			if (signupError) {
 				setError(signupError.message);
-
 				return;
 			}
 
 			if (data.session) {
 				router.push("/editor");
 				router.refresh();
-
 				return;
 			}
 
 			setMessage("Account created successfully.");
 		} catch (err) {
 			console.error(err);
-
 			setError("Something went wrong. Please try again.");
 		} finally {
 			setLoading(false);
@@ -80,24 +68,28 @@ export default function LoginPage() {
 	};
 
 	return (
-		<main className="flex min-h-[100dvh] items-center justify-center bg-[#FAF7FF] px-5 py-10">
-			<div className="w-full max-w-md">
-				<div className="rounded-2xl border border-[#E7DDF0] bg-white p-6 shadow-sm sm:p-8">
-					{/* HEADER */}
+		<main className="login-page relative flex min-h-[100dvh] items-center justify-center bg-[#FAF7FF] px-5 py-10 text-[#3F3545] transition-colors duration-200">
+			{/* Theme toggle */}
+			<div className="absolute right-5 top-5 sm:right-8 sm:top-8">
+				<ThemeToggle />
+			</div>
 
+			<div className="w-full max-w-md">
+				<div className="login-card rounded-2xl border border-[#E7DDF0] bg-white p-6 shadow-sm transition-colors duration-200 sm:p-8">
+					{/* HEADER */}
 					<div className="text-center">
-						<Link href="/" className="text-3xl font-bold text-[#6F527F]">
+						<Link
+							href="/"
+							className="login-title text-3xl font-bold text-[#6F527F]"
+						>
 							Riri's MindMap
 						</Link>
 
-						<p className="mt-2 text-sm text-[#887B91]">
-							LOCKIN!
-						</p>
+						<p className="login-muted mt-2 text-sm text-[#887B91]">LOCKIN!</p>
 					</div>
 
 					{/* MODE SWITCH */}
-
-					<div className="mt-7 grid grid-cols-2 rounded-xl bg-[#F1EAFB] p-1">
+					<div className="login-tabs mt-7 grid grid-cols-2 rounded-xl bg-[#F1EAFB] p-1">
 						<button
 							type="button"
 							onClick={() => {
@@ -107,8 +99,8 @@ export default function LoginPage() {
 							}}
 							className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
 								mode === "login"
-									? "bg-white text-[#6F527F] shadow-sm"
-									: "text-[#887B91]"
+									? "login-tab-active bg-white text-[#6F527F] shadow-sm"
+									: "login-tab-inactive text-[#887B91]"
 							}`}
 						>
 							Log in
@@ -123,8 +115,8 @@ export default function LoginPage() {
 							}}
 							className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
 								mode === "signup"
-									? "bg-white text-[#6F527F] shadow-sm"
-									: "text-[#887B91]"
+									? "login-tab-active bg-white text-[#6F527F] shadow-sm"
+									: "login-tab-inactive text-[#887B91]"
 							}`}
 						>
 							Create account
@@ -132,12 +124,11 @@ export default function LoginPage() {
 					</div>
 
 					{/* FORM */}
-
 					<form onSubmit={handleSubmit} className="mt-6 space-y-4">
 						<div>
 							<label
 								htmlFor="email"
-								className="mb-1.5 block text-sm font-medium text-[#3F3545]"
+								className="login-label mb-1.5 block text-sm font-medium text-[#3F3545]"
 							>
 								Email
 							</label>
@@ -146,20 +137,18 @@ export default function LoginPage() {
 								id="email"
 								type="email"
 								value={email}
-								onChange={(event) => {
-									setEmail(event.target.value);
-								}}
+								onChange={(event) => setEmail(event.target.value)}
 								required
 								autoComplete="email"
 								placeholder="you@example.com"
-								className="w-full rounded-xl border border-[#E7DDF0] bg-[#FAF7FF] px-3 py-3 text-sm text-[#3F3545] outline-none transition focus:border-[#9B7EBD] focus:ring-2 focus:ring-[#E9DDF2]"
+								className="login-input w-full rounded-xl border border-[#E7DDF0] bg-[#FAF7FF] px-3 py-3 text-sm text-[#3F3545] outline-none transition focus:border-[#9B7EBD] focus:ring-2 focus:ring-[#E9DDF2]"
 							/>
 						</div>
 
 						<div>
 							<label
 								htmlFor="password"
-								className="mb-1.5 block text-sm font-medium text-[#3F3545]"
+								className="login-label mb-1.5 block text-sm font-medium text-[#3F3545]"
 							>
 								Password
 							</label>
@@ -168,37 +157,32 @@ export default function LoginPage() {
 								id="password"
 								type="password"
 								value={password}
-								onChange={(event) => {
-									setPassword(event.target.value);
-								}}
+								onChange={(event) => setPassword(event.target.value)}
 								required
 								minLength={6}
 								autoComplete={
 									mode === "login" ? "current-password" : "new-password"
 								}
 								placeholder="Your password"
-								className="w-full rounded-xl border border-[#E7DDF0] bg-[#FAF7FF] px-3 py-3 text-sm text-[#3F3545] outline-none transition focus:border-[#9B7EBD] focus:ring-2 focus:ring-[#E9DDF2]"
+								className="login-input w-full rounded-xl border border-[#E7DDF0] bg-[#FAF7FF] px-3 py-3 text-sm text-[#3F3545] outline-none transition focus:border-[#9B7EBD] focus:ring-2 focus:ring-[#E9DDF2]"
 							/>
 						</div>
 
 						{/* ERROR */}
-
 						{error && (
-							<div className="rounded-xl border border-[#E8C5D5] bg-[#FCEFF4] px-3 py-3 text-sm text-[#A95F7D]">
+							<div className="login-error rounded-xl border border-[#E8C5D5] bg-[#FCEFF4] px-3 py-3 text-sm text-[#A95F7D]">
 								{error}
 							</div>
 						)}
 
 						{/* MESSAGE */}
-
 						{message && (
-							<div className="rounded-xl border border-[#DCCBE8] bg-[#F1EAFB] px-3 py-3 text-sm text-[#6F527F]">
+							<div className="login-message rounded-xl border border-[#DCCBE8] bg-[#F1EAFB] px-3 py-3 text-sm text-[#6F527F]">
 								{message}
 							</div>
 						)}
 
 						{/* SUBMIT */}
-
 						<button
 							type="submit"
 							disabled={loading}
@@ -212,7 +196,7 @@ export default function LoginPage() {
 						</button>
 					</form>
 
-					<p className="mt-6 text-center text-xs leading-5 text-[#887B91]">
+					<p className="login-muted mt-6 text-center text-xs leading-5 text-[#887B91]">
 						{mode === "signup"
 							? "You will need to verify your email before signing in."
 							: "Use the email and password associated with your account."}
