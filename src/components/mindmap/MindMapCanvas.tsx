@@ -127,17 +127,21 @@ function MindMapFlow() {
 				event.preventDefault();
 				event.stopPropagation();
 
-				const firstRootNode = nodes.find((node) => node.data?.parentId == null);
+				const currentNodes = useMindMapStore.getState().nodes;
+
+				const firstRootNode = currentNodes.find(
+					(node) => node.data?.parentId == null,
+				);
 
 				if (firstRootNode) {
-					const width = firstRootNode.measured?.width ?? 150;
-					const height = firstRootNode.measured?.height ?? 80;
-
-					setCenter(
-						firstRootNode.position.x + width / 2,
-						firstRootNode.position.y + height / 2,
-						{ zoom: 1.2, duration: 500 },
-					);
+					requestAnimationFrame(() => {
+						fitViewToCanvas({
+							nodes: [{ id: firstRootNode.id }],
+							padding: 0.25,
+							duration: 500,
+							maxZoom: 1.2,
+						});
+					});
 				}
 
 				return;

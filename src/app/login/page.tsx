@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type SubmitEvent } from "react";
+import { useEffect, useMemo, useState, type SubmitEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -9,8 +9,8 @@ import ThemeToggle from "@/components/theme/ThemeToggle";
 
 export default function LoginPage() {
 	const router = useRouter();
-	const supabase = createClient();
-
+	const supabase = useMemo(() => createClient(), []);
+	
 	const [mode, setMode] = useState<"login" | "signup">("login");
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
@@ -66,6 +66,35 @@ export default function LoginPage() {
 			setLoading(false);
 		}
 	};
+
+	useEffect(() => {
+		let active = true;
+
+		async function checkSession() {
+			const { data, error } = await supabase.auth.getUser();
+
+			if (active && !error && data.user) {
+				router.replace("/dashboard");
+				router.refresh();
+			}
+		}
+
+		checkSession();
+
+		const {
+			data: { subscription },
+		} = supabase.auth.onAuthStateChange((_event, session) => {
+			if (session?.user) {
+				router.replace("/dashboard");
+				router.refresh();
+			}
+		});
+
+		return () => {
+			active = false;
+			subscription.unsubscribe();
+		};
+	}, [router, supabase]);
 
 	return (
 		<main className="login-page relative flex min-h-[100dvh] items-center justify-center bg-[#FAF7FF] px-5 py-10 text-[#3F3545] transition-colors duration-200">

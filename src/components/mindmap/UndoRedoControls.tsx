@@ -25,9 +25,10 @@ export default function UndoRedoControls() {
         disabled={!canUndo}
         title="Undo (Ctrl+Z / Cmd+Z)"
         aria-label="Undo"
-        className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#E7DDF0] bg-white text-[#6F527F] transition hover:bg-[#F1EAFB] disabled:cursor-not-allowed disabled:opacity-40"
+        className="flex flex-1 justify-around items-center rounded-lg border border-[#DCCBE8] bg-[#FAF7FF] px-3 py-2.5 text-sm font-medium text-[#6F527F] hover:bg-[#F1EAFB] items-center"
       >
         <Undo2 size={17} />
+        Undo
       </button>
 
       <button
@@ -36,9 +37,10 @@ export default function UndoRedoControls() {
         disabled={!canRedo}
         title="Redo (Ctrl+Y / Cmd+Y)"
         aria-label="Redo"
-        className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#E7DDF0] bg-white text-[#6F527F] transition hover:bg-[#F1EAFB] disabled:cursor-not-allowed disabled:opacity-40"
+        className="flex flex-1 justify-around items-center rounded-lg border border-[#DCCBE8] bg-[#FAF7FF] px-3 py-2.5 text-sm font-medium text-[#6F527F] hover:bg-[#F1EAFB]"
       >
         <Redo2 size={17} />
+        Redo
       </button>
     </div>
   );
