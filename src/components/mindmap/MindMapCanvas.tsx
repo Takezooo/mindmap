@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
 	ReactFlow,
@@ -37,11 +37,16 @@ function MindMapFlow() {
 	const edges = useMindMapStore((state) => state.edges);
 	const selectedNodeId = useMindMapStore((state) => state.selectedNodeId);
 
+	const [gridVisible, setGridVisible] = useState(true);
+	const [snapEnabled, setSnapEnabled] = useState(true);
+
+	const gridSize: [number, number] = [24, 24];
+
 	const setNodes = useMindMapStore((state) => state.setNodes);
 	const setEdges = useMindMapStore((state) => state.setEdges);
 	const selectNode = useMindMapStore((state) => state.selectNode);
 
-	const { setCenter, getNode } = useReactFlow();
+	const { setCenter, getNode, fitView: fitViewToCanvas } = useReactFlow();
 
 	const dragStartSnapshot = useRef<{
 		nodes: Node<MindMapNodeData>[];
@@ -104,6 +109,58 @@ function MindMapFlow() {
 				return;
 			}
 
+			// 0: Center the entire mind map.
+			if (!modifier && !event.altKey && key === "0") {
+				event.preventDefault();
+				event.stopPropagation();
+
+				fitViewToCanvas({
+					padding: 0.2,
+					duration: 500,
+				});
+
+				return;
+			}
+
+			// 1: Focus the first parent/root node.
+			if (!modifier && !event.altKey && key === "1") {
+				event.preventDefault();
+				event.stopPropagation();
+
+				const currentNodes = useMindMapStore.getState().nodes;
+
+				const firstRootNode = currentNodes.find(
+					(node) => node.data?.parentId == null,
+				);
+
+				if (firstRootNode) {
+					requestAnimationFrame(() => {
+						fitViewToCanvas({
+							nodes: [{ id: firstRootNode.id }],
+							padding: 0.25,
+							duration: 500,
+							maxZoom: 1.2,
+						});
+					});
+				}
+
+				return;
+			}
+
+			// G: Toggle grid visibility.
+			if (!modifier && !event.altKey && key === "g") {
+				event.preventDefault();
+				event.stopPropagation();
+
+				if (event.shiftKey) {
+					setSnapEnabled((current) => !current);
+				} else {
+					setGridVisible((current) => !current);
+				}
+
+				return;
+			}
+
 			// CTRL + A / CMD + A: Select all nodes.
 			if (modifier && key === "a") {
 				event.preventDefault();
@@ -161,7 +218,7 @@ function MindMapFlow() {
 		return () => {
 			window.removeEventListener("keydown", handleKeyboardShortcuts);
 		};
-	}, []);
+	}, [fitViewToCanvas]);
 
 	useEffect(() => {
 		if (!selectedNodeId) return;
@@ -178,6 +235,45 @@ function MindMapFlow() {
 			duration: 400,
 		});
 	}, [selectedNodeId, getNode, setCenter]);
+
+	useEffect(() => {
+		function handleMapLoaded(event: Event) {
+			const customEvent = event as CustomEvent<{
+				rootNodeId: string | null;
+			}>;
+
+			const rootNodeId = customEvent.detail?.rootNodeId;
+
+			if (!rootNodeId) return;
+
+			// Wait for React Flow to receive and measure the loaded nodes.
+			window.requestAnimationFrame(() => {
+				const node = getNode(rootNodeId);
+
+				const fallbackNode = useMindMapStore
+					.getState()
+					.nodes.find((item) => item.id === rootNodeId);
+
+				const position = node?.position ?? fallbackNode?.position;
+
+				if (!position) return;
+
+				const width = node?.measured?.width ?? 150;
+				const height = node?.measured?.height ?? 80;
+
+				setCenter(position.x + width / 2, position.y + height / 2, {
+					zoom: 1.2,
+					duration: 500,
+				});
+			});
+		}
+
+		window.addEventListener("mindmap:map-loaded", handleMapLoaded);
+
+		return () => {
+			window.removeEventListener("mindmap:map-loaded", handleMapLoaded);
+		};
+	}, [getNode, setCenter]);
 
 	const handleNodesChange = (changes: NodeChange<Node<MindMapNodeData>>[]) => {
 		const updatedNodes = applyNodeChanges<Node<MindMapNodeData>>(
@@ -250,7 +346,34 @@ function MindMapFlow() {
 	}
 
 	return (
-		<div className="h-full w-full touch-none">
+		<div className="relative h-full w-full touch-none">
+			<div className="absolute left-4 top-4 z-10 flex gap-2">
+				<button
+					type="button"
+					onClick={() => setGridVisible((current) => !current)}
+					className={`rounded-lg border px-3 py-2 text-xs font-medium shadow-sm ${
+						gridVisible
+							? "border-[#9B7EBD] bg-[#F1EAFB] text-[#6F527F]"
+							: "border-gray-300 bg-white text-gray-500"
+					}`}
+				>
+					Grid: {gridVisible ? "On" : "Off"}
+					<span className="ml-2 opacity-60">G</span>
+				</button>
+
+				<button
+					type="button"
+					onClick={() => setSnapEnabled((current) => !current)}
+					className={`rounded-lg border px-3 py-2 text-xs font-medium shadow-sm ${
+						snapEnabled
+							? "border-[#9B7EBD] bg-[#F1EAFB] text-[#6F527F]"
+							: "border-gray-300 bg-white text-gray-500"
+					}`}
+				>
+					Snap: {snapEnabled ? "On" : "Off"}
+					<span className="ml-2 opacity-60">Shift+G</span>
+				</button>
+			</div>
 			<ReactFlow<Node<MindMapNodeData>>
 				nodes={nodes}
 				edges={edges}
@@ -261,6 +384,8 @@ function MindMapFlow() {
 				onNodesChange={handleNodesChange}
 				onEdgesChange={handleEdgesChange}
 				onNodeDragStart={handleNodeDragStart}
+				snapToGrid={snapEnabled}
+				snapGrid={gridSize}
 				onNodeDragStop={handleNodeDragStop}
 				onNodeClick={(_, node) => {
 					selectNode(node.id);
@@ -268,9 +393,11 @@ function MindMapFlow() {
 				onPaneClick={() => {
 					selectNode(null);
 				}}
-				fitView
+				fitView={false}
 			>
-				<Background gap={24} size={1} color="#eadde4" />
+				{gridVisible && (
+					<Background gap={gridSize[0]} size={1} color="#eadde4" />
+				)}
 				<Controls />
 				<MiniMap nodeColor="#c77d9b" />
 			</ReactFlow>

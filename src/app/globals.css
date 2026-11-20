@@ -356,3 +356,98 @@ html.dark {
 .dark .landing-page a {
 	box-shadow: 0 8px 24px rgb(0 0 0 / 20%);
 }
+
+/* =========================================
+   DARK MODE - LOGIN PAGE
+========================================= */
+
+.dark .login-page {
+	background-color: #17131f !important;
+	color: #eee7f5 !important;
+}
+
+.dark .login-card {
+	background-color: #241e2d !important;
+	border-color: #493b55 !important;
+}
+
+.dark .login-title {
+	color: #dfc5f4 !important;
+}
+
+.dark .login-muted {
+	color: #b8a8c6 !important;
+}
+
+.dark .login-label {
+	color: #eee7f5 !important;
+}
+
+/* Login and signup tabs */
+.dark .login-tabs {
+	background-color: #352b40 !important;
+}
+
+.dark .login-tab-active {
+	background-color: #493b55 !important;
+	color: #eadcf7 !important;
+}
+
+.dark .login-tab-inactive {
+	color: #b8a8c6 !important;
+}
+
+/* Input fields */
+.dark .login-input {
+	background-color: #211b2a !important;
+	border-color: #493b55 !important;
+	color: #eee7f5 !important;
+}
+
+.dark .login-input::placeholder {
+	color: #8f819c !important;
+}
+
+.dark .login-input:focus {
+	border-color: #a98acb !important;
+}
+
+/* Error message */
+.dark .login-error {
+	background-color: #3b2633 !important;
+	border-color: #81566c !important;
+	color: #f0c5d5 !important;
+}
+
+/* Success message */
+.dark .login-message {
+	background-color: #352b40 !important;
+	border-color: #665078 !important;
+	color: #dfc5f4 !important;
+}
+
+/* Mind map loading overlay - Light mode */
+.mindmap-loading-overlay {
+	background-color: rgb(250 247 255 / 95%);
+}
+
+.mindmap-loading-title {
+	color: #6f527f;
+}
+
+.mindmap-loading-muted {
+	color: #887b91;
+}
+
+/* Mind map loading overlay - Dark mode */
+.dark .mindmap-loading-overlay {
+	background-color: rgb(23 19 31 / 95%);
+}
+
+.dark .mindmap-loading-title {
+	color: #dfc5f4;
+}
+
+.dark .mindmap-loading-muted {
+	color: #b8a8c6;
+}

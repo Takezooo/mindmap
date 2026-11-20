@@ -41,6 +41,22 @@ export async function updateSession(request: NextRequest) {
 		request.nextUrl.pathname === "/editor" ||
 		request.nextUrl.pathname.startsWith("/editor/");
 
+	const isLogin = request.nextUrl.pathname === "/login";
+
+	if (isLogin && claims?.sub) {
+		const url = request.nextUrl.clone();
+		url.pathname = "/dashboard";
+		url.search = "";
+
+		const redirectResponse = NextResponse.redirect(url);
+
+		supabaseResponse.cookies.getAll().forEach((cookie) => {
+			redirectResponse.cookies.set(cookie);
+		});
+
+		return redirectResponse;
+	}
+
 	if (isEditor && !claims?.sub) {
 		const url = request.nextUrl.clone();
 

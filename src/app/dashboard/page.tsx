@@ -32,9 +32,7 @@ import { useRouter } from "next/navigation";
 import ThemeToggle from "@/components/theme/ThemeToggle";
 import { createClient } from "@/lib/supabase/client";
 
-/* =========================================
-   TYPES
-========================================= */
+/* TYPES ========================================= */
 
 type FolderRecord = {
 	id: string;
@@ -60,12 +58,9 @@ type MapRecord = {
 };
 
 type Section = "overview" | "maps" | "subjects" | "hidden";
-
 type ModalType = "folder" | "map" | null;
 
-/* =========================================
-   HELPERS
-========================================= */
+/* HELPERS ========================================= */
 
 function getErrorMessage(error: unknown) {
 	if (typeof error === "object" && error !== null && "message" in error) {
@@ -83,9 +78,7 @@ function formatDate(value: string) {
 	});
 }
 
-/* =========================================
-   MAIN DASHBOARD
-========================================= */
+/* MAIN DASHBOARD ========================================= */
 
 export default function DashboardPage() {
 	const router = useRouter();
@@ -99,7 +92,6 @@ export default function DashboardPage() {
 	const [maps, setMaps] = useState<MapRecord[]>([]);
 
 	const [loading, setLoading] = useState(true);
-
 	const [working, setWorking] = useState(false);
 
 	const [section, setSection] = useState<Section>("overview");
@@ -111,22 +103,14 @@ export default function DashboardPage() {
 	const [modal, setModal] = useState<ModalType>(null);
 
 	const [folderName, setFolderName] = useState("");
-
 	const [folderParentId, setFolderParentId] = useState("");
-
 	const [mapTitle, setMapTitle] = useState("");
-
 	const [mapFolderId, setMapFolderId] = useState("");
-
 	const [searchTerm, setSearchTerm] = useState("");
-
 	const [errorMessage, setErrorMessage] = useState("");
-
 	const [notice, setNotice] = useState("");
 
-	/* =========================================
-     LOAD DATABASE
-  ========================================= */
+	/* LOAD DATABASE ========================================= */
 
 	const loadDashboard = useCallback(async () => {
 		setLoading(true);
@@ -190,12 +174,9 @@ export default function DashboardPage() {
 		void loadDashboard();
 	}, [loadDashboard]);
 
-	/* =========================================
-     HIDDEN FOLDER CALCULATION
-
-     A hidden parent also hides its descendants
-     from the normal folder navigation.
-  ========================================= */
+	/* HIDDEN FOLDER CALCULATION
+    == A hidden parent also hides its descendants from the normal folder navigation.  
+	 */
 
 	const hiddenFolderIds = useMemo(() => {
 		const hidden = new Set(
@@ -239,9 +220,7 @@ export default function DashboardPage() {
 		(folder) => folder.id === selectedFolderId,
 	);
 
-	/* =========================================
-     FOLDER HELPERS
-  ========================================= */
+	/* FOLDER HELPERS ========================================= */
 
 	function getFolderPath(folderId: string) {
 		const path: FolderRecord[] = [];
@@ -280,9 +259,7 @@ export default function DashboardPage() {
 		return activeMaps.filter((map) => map.folder_id === folderId);
 	}
 
-	/* =========================================
-     NAVIGATION
-  ========================================= */
+	/* NAVIGATION ========================================= */
 
 	function navigateTo(nextSection: Section) {
 		setSection(nextSection);
@@ -301,9 +278,7 @@ export default function DashboardPage() {
 		setMobileMenuOpen(false);
 	}
 
-	/* =========================================
-     CREATE FOLDER
-  ========================================= */
+	/* CREATE FOLDER ========================================= */
 
 	async function createFolder(event: React.FormEvent<HTMLFormElement>) {
 		event.preventDefault();
@@ -353,9 +328,7 @@ export default function DashboardPage() {
 		}
 	}
 
-	/* =========================================
-     CREATE MAP
-  ========================================= */
+	/* CREATE MAP ========================================= */
 
 	async function createMap(event: React.FormEvent<HTMLFormElement>) {
 		event.preventDefault();
@@ -431,9 +404,7 @@ export default function DashboardPage() {
 		}
 	}
 
-	/* =========================================
-     OPEN MAP
-  ========================================= */
+	/* OPEN MAP ========================================= */
 
 	function openMap(map: MapRecord) {
 		if (!userId) return;
@@ -443,9 +414,7 @@ export default function DashboardPage() {
 		router.push("/editor");
 	}
 
-	/* =========================================
-     RENAME MAP
-  ========================================= */
+	/* RENAME MAP ========================================= */
 
 	async function renameMap(map: MapRecord) {
 		const nextTitle = window
@@ -479,9 +448,7 @@ export default function DashboardPage() {
 		}
 	}
 
-	/* =========================================
-     MOVE MAP
-  ========================================= */
+	/* MOVE MAP ========================================= */
 
 	async function moveMap(map: MapRecord, folderId: string) {
 		if (!userId) return;
@@ -516,9 +483,7 @@ export default function DashboardPage() {
 		}
 	}
 
-	/* =========================================
-     HIDE / UNHIDE MAP
-  ========================================= */
+	/* HIDE / UNHIDE MAP ========================================= */
 
 	async function toggleMapHidden(map: MapRecord) {
 		if (!userId) return;
@@ -553,9 +518,7 @@ export default function DashboardPage() {
 		}
 	}
 
-	/* =========================================
-     DELETE MAP
-  ========================================= */
+	/* DELETE MAP ========================================= */
 
 	async function deleteMap(map: MapRecord) {
 		if (!userId) return;
@@ -591,9 +554,7 @@ export default function DashboardPage() {
 		}
 	}
 
-	/* =========================================
-     FOLDER ACTIONS
-  ========================================= */
+	/* FOLDER ACTIONS ========================================= */
 
 	async function renameFolder(folder: FolderRecord) {
 		const nextName = window
@@ -660,9 +621,7 @@ export default function DashboardPage() {
 		}
 	}
 
-	/* =========================================
-     LOGOUT
-  ========================================= */
+	/* LOGOUT ========================================= */
 
 	async function logout() {
 		const supabase = createClient();
@@ -678,9 +637,7 @@ export default function DashboardPage() {
 		router.refresh();
 	}
 
-	/* =========================================
-     FILTERED DATA
-  ========================================= */
+	/* FILTERED DATA ========================================= */
 
 	const recentMaps = activeMaps.slice(0, 4);
 
@@ -696,9 +653,7 @@ export default function DashboardPage() {
 
 	const currentMaps = getMapsInFolder(selectedFolderId);
 
-	/* =========================================
-     NAVIGATION ITEM
-  ========================================= */
+	/* NAVIGATION ITEM ========================================= */
 
 	function navigationItem(
 		id: Section,
@@ -724,9 +679,7 @@ export default function DashboardPage() {
 		);
 	}
 
-	/* =========================================
-     MAP CARD
-  ========================================= */
+	/* MAP CARD ========================================= */
 
 	function renderMapCard(map: MapRecord) {
 		const isHidden = map.is_hidden;
@@ -839,9 +792,7 @@ export default function DashboardPage() {
 		);
 	}
 
-	/* =========================================
-     FOLDER CARD
-  ========================================= */
+	/* FOLDER CARD ========================================= */
 
 	function renderFolderCard(folder: FolderRecord) {
 		const childCount = getChildFolders(folder.id).length;
@@ -910,9 +861,7 @@ export default function DashboardPage() {
 		);
 	}
 
-	/* =========================================
-     CREATE MODAL
-  ========================================= */
+	/* CREATE MODAL ========================================= */
 
 	function openCreateModal(type: ModalType) {
 		setErrorMessage("");
@@ -936,14 +885,11 @@ export default function DashboardPage() {
 		setErrorMessage("");
 	}
 
-	/* =========================================
-     LOADING
-  ========================================= */
+	/* LOADING ========================================= */
 
 	if (loading) {
 		return (
-			<main className="dashboard-page min-h-[100dvh] bg-[#FAF7FF] text-[#3F3545]">
-				{" "}
+			<main className="dashboard-page flex items-center justify-center min-h-[100dvh] bg-[#FAF7FF] text-[#3F3545]">
 				<div className="text-center">
 					<div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-[#E7DDF0] border-t-[#9B7EBD]" />
 
@@ -1370,12 +1316,30 @@ export default function DashboardPage() {
 	function renderNavigation() {
 		return (
 			<div className="flex h-full flex-col">
-				<div className="border-b border-[#E7DDF0] px-5 py-5">
-					<h2 className="text-xl font-bold text-[#6F527F]">Riri's MindMap</h2>
+				<div className="flex justify-between items-center border-b border-[#E7DDF0] px-5 py-5">
+					<div>
+						<h2
+							className="text-l font-bold text-[#6F527F]"
+							onClick={() => router.push("/")}
+						>
+							Riri's MindMap
+						</h2>
 
-					<p className="mt-1 text-xs text-[#887B91]">
-						Your personal study space
-					</p>
+						<p className="mt-1 text-xs text-[#887B91]">
+							Your personal study space
+						</p>
+					</div>
+					<div className="flex gap-1 lg:hidden">
+						<ThemeToggle />
+						<button
+							type="button"
+							onClick={() => setMobileMenuOpen(false)}
+							className="rounded-lg p-2 text-[#887B91] hover:bg-[#F1EAFB]"
+							aria-label="Close navigation"
+						>
+							<X size={20} />
+						</button>
+					</div>
 				</div>
 
 				<div className="flex-1 overflow-y-auto p-3">
@@ -1505,8 +1469,7 @@ export default function DashboardPage() {
 						</button>
 
 						<div className="text-center">
-							<h1 className="font-semibold text-[#6F527F]">MindMap</h1>
-
+							<h1 className="font-semibold text-[#6F527F]">Dashboard</h1>
 							<p className="text-[11px] text-[#887B91]">{pageTitle[section]}</p>
 						</div>
 
@@ -1519,7 +1482,6 @@ export default function DashboardPage() {
 							>
 								<Plus size={20} />
 							</button>
-							<ThemeToggle />
 						</div>
 					</header>
 
@@ -1600,19 +1562,6 @@ export default function DashboardPage() {
 					/>
 
 					<aside className="absolute inset-y-0 left-0 flex w-[85%] max-w-xs flex-col bg-white shadow-2xl">
-						<div className="flex items-center justify-between border-b border-[#E7DDF0] px-5 py-4">
-							<span className="font-semibold text-[#6F527F]">Navigation</span>
-
-							<button
-								type="button"
-								onClick={() => setMobileMenuOpen(false)}
-								className="rounded-lg p-2 text-[#887B91] hover:bg-[#F1EAFB]"
-								aria-label="Close navigation"
-							>
-								<X size={20} />
-							</button>
-						</div>
-
 						{renderNavigation()}
 					</aside>
 				</div>

@@ -19,6 +19,5 @@ export type MindMapNodeData = {
   descriptionVisible?: boolean;
   shape: NodeShape;
   color: NodeColor;
-  maxChildren: number;
   parentId: string | null;
 };

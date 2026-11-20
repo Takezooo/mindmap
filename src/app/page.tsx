@@ -38,7 +38,6 @@ export default function Home() {
 					Open Mind Map
 				</Link>
 			</div>
-
 			<div
 				className="pointer-events-none absolute bottom-0 left-1/2 z-10 w-[180px] -translate-x-1/2 sm:w-[220px] md:w-[280px] lg:w-[340px]"
 				aria-hidden="true"
