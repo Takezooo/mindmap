@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { temporal } from "zundo";
-import type { Node, Edge } from "@xyflow/react";
+import type { Node, Edge, Connection } from "@xyflow/react";
 
 import type { MindMapNodeData } from "@/types/mindmap";
 
@@ -30,7 +30,7 @@ interface MindMapState {
 	deleteNode: (nodeId: string) => void;
 
 	reparentNode: (childId: string, newParentId: string) => void;
-
+	reconnectEdge: (edgeId: string, connection: Connection) => void;
 	replaceMap: (nodes: Node<MindMapNodeData>[], edges: Edge[]) => void;
 }
 
@@ -459,6 +459,78 @@ export const useMindMapStore = create<MindMapState>()(
 						};
 					}),
 
+				reconnectEdge: (edgeId, connection) =>
+					set((state) => {
+						const oldEdge = state.edges.find((edge) => edge.id === edgeId);
+
+						const { source, target } = connection;
+
+						if (!oldEdge || !source || !target) return state;
+
+						if (source === target) return state;
+
+						const sourceNode = state.nodes.find((node) => node.id === source);
+						const targetNode = state.nodes.find((node) => node.id === target);
+
+						if (!sourceNode || !targetNode) return state;
+
+						// Prevent circular parent-child relationships.
+						let ancestorId: string | null = source;
+
+						while (ancestorId) {
+							if (ancestorId === target) return state;
+
+							const ancestor = state.nodes.find(
+								(node) => node.id === ancestorId,
+							);
+
+							ancestorId = ancestor?.data.parentId ?? null;
+						}
+
+						// If the target endpoint changes, release the previous child.
+						const updatedNodes = state.nodes.map((node) => {
+							if (node.id === oldEdge.target && oldEdge.target !== target) {
+								return {
+									...node,
+									data: {
+										...node.data,
+										parentId: null,
+									},
+								};
+							}
+
+							if (node.id === target) {
+								return {
+									...node,
+									data: {
+										...node.data,
+										parentId: source,
+									},
+								};
+							}
+
+							return node;
+						});
+
+						// Remove the old connection and any previous parent connection
+						// for the new target.
+						const updatedEdges = state.edges.filter(
+							(edge) => edge.id !== edgeId && edge.target !== target,
+						);
+
+						updatedEdges.push({
+							...oldEdge,
+							...connection,
+							id: `${source}-${target}`,
+							source,
+							target,
+						});
+
+						return {
+							nodes: updatedNodes,
+							edges: updatedEdges,
+						};
+					}),
 				replaceMap: (nodes, edges) =>
 					set({
 						nodes,

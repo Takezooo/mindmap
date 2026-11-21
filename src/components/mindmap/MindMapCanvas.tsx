@@ -178,12 +178,30 @@ function MindMapFlow() {
 
 			// DELETE / BACKSPACE: Delete selected node.
 			if (event.key === "Delete" || event.key === "Backspace") {
-				if (!state.selectedNodeId) return;
+				const currentState = useMindMapStore.getState();
+
+				const hasSelectedNode = Boolean(currentState.selectedNodeId);
+				const hasSelectedEdges = currentState.edges.some(
+					(edge) => edge.selected,
+				);
+
+				if (!hasSelectedNode && !hasSelectedEdges) return;
 
 				event.preventDefault();
 				event.stopPropagation();
 
-				state.deleteNode(state.selectedNodeId);
+				if (hasSelectedNode) {
+					currentState.deleteNode(currentState.selectedNodeId!);
+				}
+
+				const latestState = useMindMapStore.getState();
+
+				if (hasSelectedEdges) {
+					latestState.setEdges(
+						latestState.edges.filter((edge) => !edge.selected),
+					);
+				}
+
 				return;
 			}
 
@@ -334,15 +352,7 @@ function MindMapFlow() {
 	}
 
 	function handleReconnect(oldEdge: Edge, newConnection: Connection) {
-		if (!newConnection.source || !newConnection.target) return;
-
-		if (newConnection.target !== oldEdge.target) return;
-
-		if (newConnection.source === oldEdge.source) return;
-
-		useMindMapStore
-			.getState()
-			.reparentNode(oldEdge.target, newConnection.source);
+		useMindMapStore.getState().reconnectEdge(oldEdge.id, newConnection);
 	}
 
 	return (
