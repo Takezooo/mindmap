@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
 	ReactFlow,
@@ -45,6 +45,7 @@ function MindMapFlow() {
 	const setNodes = useMindMapStore((state) => state.setNodes);
 	const setEdges = useMindMapStore((state) => state.setEdges);
 	const selectNode = useMindMapStore((state) => state.selectNode);
+	const setActiveNodeId = useMindMapStore((state) => state.setActiveNodeId);
 
 	const { setCenter, getNode, fitView: fitViewToCanvas } = useReactFlow();
 
@@ -178,27 +179,34 @@ function MindMapFlow() {
 
 			// DELETE / BACKSPACE: Delete selected node.
 			if (event.key === "Delete" || event.key === "Backspace") {
-				const currentState = useMindMapStore.getState();
+				const state = useMindMapStore.getState();
 
-				const hasSelectedNode = Boolean(currentState.selectedNodeId);
-				const hasSelectedEdges = currentState.edges.some(
-					(edge) => edge.selected,
-				);
+				const selectedNodeIds = state.nodes
+					.filter((node) => node.selected)
+					.map((node) => node.id);
 
-				if (!hasSelectedNode && !hasSelectedEdges) return;
+				const selectedEdgeIds = state.edges
+					.filter((edge) => edge.selected)
+					.map((edge) => edge.id);
+
+				if (selectedNodeIds.length === 0 && selectedEdgeIds.length === 0) {
+					return;
+				}
 
 				event.preventDefault();
 				event.stopPropagation();
 
-				if (hasSelectedNode) {
-					currentState.deleteNode(currentState.selectedNodeId!);
+				if (selectedNodeIds.length > 0) {
+					state.deleteNodes(selectedNodeIds);
 				}
 
-				const latestState = useMindMapStore.getState();
+				if (selectedEdgeIds.length > 0) {
+					const latestState = useMindMapStore.getState();
 
-				if (hasSelectedEdges) {
 					latestState.setEdges(
-						latestState.edges.filter((edge) => !edge.selected),
+						latestState.edges.filter(
+							(edge) => !selectedEdgeIds.includes(edge.id),
+						),
 					);
 				}
 
@@ -293,6 +301,19 @@ function MindMapFlow() {
 		};
 	}, [getNode, setCenter]);
 
+	// for arrow connections
+	const handleConnect = useCallback((connection: Connection) => {
+		const state = useMindMapStore.getState();
+
+		const newEdge: Edge = {
+			...connection,
+			id: `connection-${crypto.randomUUID()}`,
+			type: "default",
+		};
+
+		state.setEdges([...state.edges, newEdge]);
+	}, []);
+
 	const handleNodesChange = (changes: NodeChange<Node<MindMapNodeData>>[]) => {
 		const updatedNodes = applyNodeChanges<Node<MindMapNodeData>>(
 			changes,
@@ -386,6 +407,7 @@ function MindMapFlow() {
 				nodeTypes={nodeTypes}
 				deleteKeyCode={null}
 				edgesReconnectable={true}
+				onConnect={handleConnect}
 				onReconnect={handleReconnect}
 				onNodesChange={handleNodesChange}
 				onEdgesChange={handleEdgesChange}
@@ -393,11 +415,13 @@ function MindMapFlow() {
 				snapToGrid={snapEnabled}
 				snapGrid={gridSize}
 				onNodeDragStop={handleNodeDragStop}
-				onNodeClick={(_, node) => {
-					selectNode(node.id);
+				multiSelectionKeyCode="Control"
+				selectionOnDrag={false}
+				onSelectionChange={({ nodes: selectedNodes }) => {
+					setActiveNodeId(selectedNodes[selectedNodes.length - 1]?.id ?? null);
 				}}
 				onPaneClick={() => {
-					selectNode(null);
+					setActiveNodeId(null);
 				}}
 				fitView={false}
 			>

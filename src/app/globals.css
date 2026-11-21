@@ -767,3 +767,16 @@ html.dark .mindmap-editor .react-flow__minimap-mask {
 html.dark .mindmap-editor .react-flow__background pattern circle {
 	fill: #f4e4ff !important;
 }
+
+/* Light mode: selected mind map nodes */
+.mindmap-editor .react-flow__node.selected .mindmap-node-card {
+	outline: 2px solid #9b7ebd;
+	outline-offset: 3px;
+	box-shadow: 0 0 0 4px rgb(155 126 189 / 15%);
+}
+
+/* Dark mode: selected mind map nodes */
+.dark .mindmap-editor .react-flow__node.selected .mindmap-node-card {
+	outline-color: #c7a6ea;
+	box-shadow: 0 0 0 4px rgb(199 166 234 / 20%);
+}

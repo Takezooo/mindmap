@@ -27,6 +27,9 @@ interface MindMapState {
 
 	updateNode: (nodeId: string, data: Partial<MindMapNodeData>) => void;
 
+	toggleNodeSelection: (nodeId: string) => void;
+	setActiveNodeId: (nodeId: string | null) => void;
+	deleteNodes: (nodeIds: string[]) => void;
 	deleteNode: (nodeId: string) => void;
 
 	reparentNode: (childId: string, newParentId: string) => void;
@@ -127,11 +130,43 @@ export const useMindMapStore = create<MindMapState>()(
 				setEdges: (edges) => set({ edges }),
 
 				selectNode: (nodeId) =>
+					set((state) => ({
+						nodes: state.nodes.map((node) => ({
+							...node,
+							selected: node.id === nodeId,
+						})),
+						selectedNodeId: nodeId,
+						descriptionNodeId: null,
+					})),
+
+				setActiveNodeId: (nodeId) =>
 					set({
 						selectedNodeId: nodeId,
 						descriptionNodeId: null,
 					}),
 
+				toggleNodeSelection: (nodeId) =>
+					set((state) => {
+						const clickedNode = state.nodes.find((node) => node.id === nodeId);
+
+						if (!clickedNode) return state;
+
+						const shouldSelect = !clickedNode.selected;
+
+						const updatedNodes = state.nodes.map((node) =>
+							node.id === nodeId ? { ...node, selected: shouldSelect } : node,
+						);
+
+						const selectedNodes = updatedNodes.filter((node) => node.selected);
+
+						return {
+							nodes: updatedNodes,
+							selectedNodeId: shouldSelect
+								? nodeId
+								: (selectedNodes[selectedNodes.length - 1]?.id ?? null),
+							descriptionNodeId: null,
+						};
+					}),
 				openDescription: (nodeId) =>
 					set({
 						selectedNodeId: nodeId,
@@ -398,6 +433,83 @@ export const useMindMapStore = create<MindMapState>()(
 								});
 							});
 						}
+
+						return {
+							nodes: updatedNodes,
+							edges: updatedEdges,
+							selectedNodeId: null,
+							descriptionNodeId: null,
+						};
+					}),
+				// For multiple deletion
+				deleteNodes: (nodeIds) =>
+					set((state) => {
+						const deletedIds = new Set(nodeIds);
+
+						if (deletedIds.size === 0) return state;
+
+						const originalNodes = state.nodes;
+						const survivingNodes = originalNodes.filter(
+							(node) => !deletedIds.has(node.id),
+						);
+
+						// Reassign surviving descendants to the nearest surviving ancestor.
+						const updatedNodes = survivingNodes.map((node) => {
+							let parentId = node.data.parentId;
+							const visited = new Set<string>();
+
+							while (parentId && deletedIds.has(parentId)) {
+								if (visited.has(parentId)) {
+									parentId = null;
+									break;
+								}
+
+								visited.add(parentId);
+
+								const deletedParent = originalNodes.find(
+									(item) => item.id === parentId,
+								);
+
+								parentId = deletedParent?.data.parentId ?? null;
+							}
+
+							return {
+								...node,
+								selected: false,
+								data: {
+									...node.data,
+									parentId,
+								},
+							};
+						});
+
+						let updatedEdges = state.edges.filter(
+							(edge) =>
+								!deletedIds.has(edge.source) && !deletedIds.has(edge.target),
+						);
+
+						// Rebuild incoming edges for nodes whose parent changed.
+						updatedNodes.forEach((node) => {
+							const originalNode = originalNodes.find(
+								(item) => item.id === node.id,
+							);
+
+							if (originalNode?.data.parentId === node.data.parentId) {
+								return;
+							}
+
+							updatedEdges = updatedEdges.filter(
+								(edge) => edge.target !== node.id,
+							);
+
+							if (node.data.parentId) {
+								updatedEdges.push({
+									id: `${node.data.parentId}-${node.id}`,
+									source: node.data.parentId,
+									target: node.id,
+								});
+							}
+						});
 
 						return {
 							nodes: updatedNodes,
