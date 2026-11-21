@@ -451,3 +451,319 @@ html.dark {
 .dark .mindmap-loading-muted {
 	color: #b8a8c6;
 }
+
+/* ========================================
+   NODE PROPERTIES - LIGHT MODE
+======================================== */
+
+.node-properties-panel {
+	background-color: #ffffff;
+	color: #6f527f;
+}
+
+.node-properties-header {
+	border-color: #eadde4;
+}
+
+.node-properties-heading {
+	color: #6f527f;
+}
+
+.node-properties-muted {
+	color: #887b91;
+}
+
+.node-properties-field {
+	background-color: #fffafc;
+	color: #6f527f;
+	border-color: #eadde4;
+	caret-color: #8f5f76;
+}
+
+.node-properties-field::placeholder {
+	color: #a99aa3;
+	opacity: 1;
+}
+
+.node-properties-field:focus {
+	border-color: #eadde4;
+	outline: none;
+	box-shadow: 0 0 0 2px #f6dce7;
+}
+
+.node-properties-field option {
+	background-color: #ffffff;
+	color: #6f527f;
+}
+
+.node-properties-delete {
+	border-color: #eadde4;
+}
+
+.node-properties-delete button {
+	border-color: #c05f78;
+	color: #c05f78;
+}
+
+.node-properties-delete button:hover {
+	background-color: #fff1f4;
+}
+
+/* ========================================
+   NODE PROPERTIES - DARK MODE
+======================================== */
+
+html.dark .node-properties-panel {
+	background-color: #211c2a;
+	color: #f0e8f5;
+}
+
+html.dark .node-properties-header {
+	border-color: #403449;
+}
+
+html.dark .node-properties-heading {
+	color: #d6b3e8;
+}
+
+html.dark .node-properties-muted {
+	color: #bbaec5;
+}
+
+html.dark .node-properties-field {
+	background-color: #30283c;
+	color: #f5eef9;
+	border-color: #51445e;
+	caret-color: #d6b3e8;
+}
+
+html.dark .node-properties-field::placeholder {
+	color: #bbaec5;
+	opacity: 1;
+}
+
+html.dark .node-properties-field:focus {
+	border-color: #b58bcf;
+	box-shadow: 0 0 0 2px rgb(181 139 207 / 20%);
+}
+
+html.dark .node-properties-field option {
+	background-color: #30283c;
+	color: #f5eef9;
+}
+
+html.dark .node-properties-delete {
+	border-color: #403449;
+}
+
+html.dark .node-properties-delete button {
+	border-color: #754452;
+	color: #f09baf;
+}
+
+html.dark .node-properties-delete button:hover {
+	background-color: #452a36;
+}
+
+html.dark .node-properties-color-selected {
+	--tw-ring-offset-color: #211c2a;
+}
+
+/* =========================================
+   MAP OUTLINE - LIGHT MODE
+========================================= */
+
+.map-tree-item {
+	color: #3f3545;
+	transition:
+		background-color 150ms ease,
+		color 150ms ease;
+}
+
+.map-tree-item:hover {
+	background-color: #f1eafb;
+}
+
+.map-tree-item-selected {
+	background-color: #e9def5;
+	color: #5e3f79;
+	font-weight: 600;
+}
+
+.map-tree-item-selected:hover {
+	background-color: #e2d4f0;
+}
+
+.map-tree-expand {
+	color: #887b91;
+}
+
+.map-tree-expand:hover {
+	background-color: #e9def5;
+	color: #6f527f;
+}
+
+.map-tree-label {
+	color: inherit;
+}
+
+/* =========================================
+   MAP OUTLINE - DARK MODE
+========================================= */
+
+html.dark .map-tree-item {
+	color: #e8dff0;
+}
+
+html.dark .map-tree-item:hover {
+	background-color: #352b40;
+}
+
+html.dark .map-tree-item-selected {
+	background-color: #51405f;
+	color: #ffffff;
+	font-weight: 600;
+	box-shadow: inset 3px 0 0 #c7a6ea;
+}
+
+html.dark .map-tree-item-selected:hover {
+	background-color: #5b476b;
+}
+
+html.dark .map-tree-expand {
+	color: #bba9ca;
+}
+
+html.dark .map-tree-expand:hover {
+	background-color: #40334e;
+	color: #ffffff;
+}
+
+/* =========================================
+   CANVAS TOOL BUTTONS - LIGHT MODE
+========================================= */
+
+.mindmap-canvas-tool {
+	border: 1px solid #d9c9e5;
+	border-radius: 8px;
+	background-color: #ffffff;
+	color: #6f527f;
+	padding: 8px 12px;
+	font-size: 12px;
+	font-weight: 500;
+	box-shadow: 0 2px 5px rgb(63 53 69 / 8%);
+	transition:
+		background-color 150ms ease,
+		border-color 150ms ease;
+}
+
+.mindmap-canvas-tool:hover {
+	background-color: #f1eafb;
+}
+
+.mindmap-canvas-tool-active {
+	background-color: #e9def5;
+	border-color: #a98acb;
+	color: #5e3f79;
+}
+
+/* =========================================
+   CANVAS TOOL BUTTONS - DARK MODE
+========================================= */
+
+html.dark .mindmap-canvas-tool {
+	background-color: #30283c;
+	border-color: #51405f;
+	color: #e8dff0;
+	box-shadow: 0 2px 5px rgb(0 0 0 / 20%);
+}
+
+html.dark .mindmap-canvas-tool:hover {
+	background-color: #40334e;
+}
+
+html.dark .mindmap-canvas-tool-active {
+	background-color: #51405f;
+	border-color: #a98acb;
+	color: #ffffff;
+}
+
+/* =========================================
+   REACT FLOW CONTROLS - LIGHT MODE
+========================================= */
+
+.mindmap-editor .react-flow__controls {
+	background-color: #ffffff;
+	border: 1px solid #d9c9e5;
+	border-radius: 8px;
+	overflow: hidden;
+	box-shadow: 0 2px 8px rgb(63 53 69 / 12%);
+}
+
+.mindmap-editor .react-flow__controls-button {
+	background-color: #ffffff;
+	color: #6f527f;
+	border-bottom: 1px solid #eadde4;
+}
+
+.mindmap-editor .react-flow__controls-button:hover {
+	background-color: #f1eafb;
+}
+
+.mindmap-editor .react-flow__controls-button svg {
+	fill: none;
+	stroke: currentColor;
+}
+
+.mindmap-editor .react-flow__controls-button:last-child {
+	border-bottom: none;
+}
+
+/* =========================================
+   REACT FLOW CONTROLS - DARK MODE
+========================================= */
+
+html.dark .mindmap-editor .react-flow__controls {
+	background-color: #30283c;
+	border-color: #51405f;
+	box-shadow: 0 2px 8px rgb(0 0 0 / 30%);
+}
+
+html.dark .mindmap-editor .react-flow__controls-button {
+	background-color: #30283c;
+	color: #e8dff0;
+	border-bottom-color: #51405f;
+}
+
+html.dark .mindmap-editor .react-flow__controls-button:hover {
+	background-color: #51405f;
+}
+
+/* =========================================
+   REACT FLOW MINIMAP - DARK MODE
+========================================= */
+
+html.dark .mindmap-editor .react-flow__minimap {
+	background-color: #30283c;
+	border: 1px solid #51405f;
+}
+
+html.dark .mindmap-editor .react-flow__minimap-mask {
+	fill: rgb(23 19 31 / 65%);
+}
+
+/* =========================================
+   GRID POINTS - LIGHT MODE
+========================================= */
+
+.mindmap-editor .react-flow__background pattern circle {
+	fill: #b143ff;
+}
+
+/* =========================================
+   GRID POINTS - DARK MODE
+========================================= */
+
+html.dark .mindmap-editor .react-flow__background pattern circle {
+	fill: #f4e4ff !important;
+}

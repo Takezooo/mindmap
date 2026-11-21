@@ -351,10 +351,8 @@ function MindMapFlow() {
 				<button
 					type="button"
 					onClick={() => setGridVisible((current) => !current)}
-					className={`rounded-lg border px-3 py-2 text-xs font-medium shadow-sm ${
-						gridVisible
-							? "border-[#9B7EBD] bg-[#F1EAFB] text-[#6F527F]"
-							: "border-gray-300 bg-white text-gray-500"
+					className={`rounded-lg border px-3 py-2 text-xs font-medium shadow-sm mindmap-canvas-tool ${
+						gridVisible ? "mindmap-canvas-tool-active" : ""
 					}`}
 				>
 					Grid: {gridVisible ? "On" : "Off"}
@@ -364,10 +362,8 @@ function MindMapFlow() {
 				<button
 					type="button"
 					onClick={() => setSnapEnabled((current) => !current)}
-					className={`rounded-lg border px-3 py-2 text-xs font-medium shadow-sm ${
-						snapEnabled
-							? "border-[#9B7EBD] bg-[#F1EAFB] text-[#6F527F]"
-							: "border-gray-300 bg-white text-gray-500"
+					className={`rounded-lg border px-3 py-2 text-xs font-medium shadow-sm mindmap-canvas-tool ${
+						snapEnabled ? "mindmap-canvas-tool-active" : ""
 					}`}
 				>
 					Snap: {snapEnabled ? "On" : "Off"}
@@ -396,7 +392,7 @@ function MindMapFlow() {
 				fitView={false}
 			>
 				{gridVisible && (
-					<Background gap={gridSize[0]} size={1} color="#eadde4" />
+					<Background gap={gridSize[0]} size={1} color="#be45ff" />
 				)}
 				<Controls />
 				<MiniMap nodeColor="#c77d9b" />

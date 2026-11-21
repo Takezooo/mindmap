@@ -82,12 +82,12 @@ export default function EditorPage() {
 					<aside className="flex w-72 shrink-0 flex-col border-r border-[#E7DDF0] bg-white">
 						<div className="flex items-center justify-between gap-2 border-b border-[#E7DDF0] p-4">
 							<div>
-								<h1
-									className="cursor-pointer text-lg font-semibold text-[#6F527F]"
+								<h2
+									className="text-lg cursor-pointer font-bold text-[#6F527F]"
 									onClick={() => router.push("/dashboard")}
 								>
 									Riri's Mind Map
-								</h1>
+								</h2>
 
 								<p className="mt-1 text-xs text-[#887B91]">
 									For you review, FIGHTING!
