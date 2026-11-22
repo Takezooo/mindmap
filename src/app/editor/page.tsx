@@ -34,8 +34,8 @@ export default function EditorPage() {
 
 	useEffect(() => {
 		function handleSidebarShortcuts(event: KeyboardEvent) {
-			
-			const modifier = event.ctrlKey || event.metaKey || event.altKey || event.shiftKey;
+			const modifier =
+				event.ctrlKey || event.metaKey || event.altKey || event.shiftKey;
 			const key = event.key.toLowerCase();
 			const target = event.target;
 
@@ -66,6 +66,34 @@ export default function EditorPage() {
 
 		return () => {
 			window.removeEventListener("keydown", handleSidebarShortcuts);
+		};
+	}, []);
+
+	useEffect(() => {
+		const tabletQuery = window.matchMedia(
+			"(min-width: 768px) and (max-width: 1023px)",
+		);
+
+		const handleTabletChange = (event: MediaQueryListEvent) => {
+			if (event.matches) {
+				setDesktopLeftOpen(false);
+				setDesktopRightOpen(false);
+			} else {
+				setDesktopLeftOpen(true);
+				setDesktopRightOpen(true);
+			}
+		};
+
+		// Apply the initial layout.
+		if (tabletQuery.matches) {
+			setDesktopLeftOpen(false);
+			setDesktopRightOpen(false);
+		}
+
+		tabletQuery.addEventListener("change", handleTabletChange);
+
+		return () => {
+			tabletQuery.removeEventListener("change", handleTabletChange);
 		};
 	}, []);
 
@@ -143,7 +171,7 @@ export default function EditorPage() {
 						<button
 							type="button"
 							onClick={() => setDesktopLeftOpen((current) => !current)}
-							className="flex items-center gap-2 rounded-lg border border-[#E7DDF0] bg-white px-3 py-2 text-xs font-medium text-[#6F527F] shadow-sm transition hover:bg-[#F1EAFB]"
+							className="mindmap-sidebar-toggle flex items-center gap-2 rounded-lg border border-[#E7DDF0] bg-white px-3 py-2 text-xs font-medium text-[#6F527F] shadow-sm transition hover:bg-[#F1EAFB]"
 							aria-label={
 								desktopLeftOpen ? "Hide map outline" : "Show map outline"
 							}
@@ -156,7 +184,7 @@ export default function EditorPage() {
 						<button
 							type="button"
 							onClick={() => setDesktopRightOpen((current) => !current)}
-							className="flex items-center gap-2 rounded-lg border border-[#E7DDF0] bg-white px-3 py-2 text-xs font-medium text-[#6F527F] shadow-sm transition hover:bg-[#F1EAFB]"
+							className="mindmap-sidebar-toggle flex items-center gap-2 rounded-lg border border-[#E7DDF0] bg-white px-3 py-2 text-xs font-medium text-[#6F527F] shadow-sm transition hover:bg-[#F1EAFB]"
 							aria-label={
 								desktopRightOpen ? "Hide properties" : "Show properties"
 							}

@@ -780,3 +780,207 @@ html.dark .mindmap-editor .react-flow__background pattern circle {
 	outline-color: #c7a6ea;
 	box-shadow: 0 0 0 4px rgb(199 166 234 / 20%);
 }
+
+/* Tablet and touchscreen connection handles */
+@media (pointer: coarse) {
+	.react-flow .react-flow__handle {
+		width: 18px;
+		height: 18px;
+		touch-action: none;
+		z-index: 10;
+	}
+
+	.react-flow .react-flow__handle-left {
+		left: -9px;
+	}
+
+	.react-flow .react-flow__handle-right {
+		right: -9px;
+	}
+
+	.react-flow .react-flow__handle-top {
+		top: -9px;
+	}
+
+	.react-flow .react-flow__handle-bottom {
+		bottom: -9px;
+	}
+}
+
+/* =========================================
+   FLOATING TABLET / MOBILE TOOLBAR
+========================================= */
+
+/* Hidden by default on desktop and laptop */
+.mindmap-floating-toolbar {
+	display: none;
+}
+
+/* Touch-oriented mobile and tablet devices */
+@media (hover: none) and (pointer: coarse) {
+	.mindmap-floating-toolbar {
+		position: absolute;
+		z-index: 30;
+		display: flex;
+		align-items: center;
+		gap: 4px;
+
+		bottom: 12px;
+		left: 50%;
+
+		width: max-content;
+		max-width: calc(100% - 20px);
+		padding: 6px;
+
+		overflow-x: auto;
+		overflow-y: hidden;
+		white-space: nowrap;
+
+		background: #ffffff;
+		color: #352b3d;
+
+		border: 1px solid #d9cbdc;
+		border-radius: 16px;
+		box-shadow: 0 5px 22px rgb(0 0 0 / 20%);
+	}
+
+	/* Toolbar buttons */
+	.mindmap-floating-toolbar button {
+		min-width: 44px;
+		min-height: 44px;
+		padding: 6px 9px;
+
+		border: 1px solid #d8cbdc;
+		border-radius: 10px;
+
+		background: #eee7f4;
+		color: #352b3d;
+
+		font-size: 12px;
+		font-weight: 500;
+
+		cursor: pointer;
+		touch-action: manipulation;
+		flex-shrink: 0;
+	}
+
+	.mindmap-floating-toolbar button:active {
+		background: #d9c7e8;
+	}
+
+	.mindmap-floating-toolbar button.active {
+		background: #76518f;
+		border-color: #76518f;
+		color: #ffffff;
+	}
+
+	.mindmap-floating-toolbar button:disabled {
+		opacity: 0.4;
+		cursor: not-allowed;
+	}
+
+	.tool-bar-del button {
+		background-color: #fff;
+		border-color: #c05f78;
+		color: #c05f78;
+	}
+
+	/* Button group divider */
+	.mindmap-toolbar-divider {
+		width: 1px;
+		height: 28px;
+		flex-shrink: 0;
+		background: #d4c8d8;
+	}
+
+	/* Draggable toolbar handle */
+	.mindmap-toolbar-drag {
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		align-items: center;
+		gap: 3px;
+
+		width: 22px;
+		min-width: 22px;
+		height: 40px;
+
+		cursor: grab;
+		touch-action: none;
+		user-select: none;
+		flex-shrink: 0;
+	}
+
+	.mindmap-toolbar-drag:active {
+		cursor: grabbing;
+	}
+
+	.mindmap-toolbar-drag span {
+		width: 15px;
+		height: 3px;
+		border-radius: 3px;
+		background: #81718a;
+	}
+
+	/* Dark mode */
+	html.dark .mindmap-floating-toolbar {
+		background: #241e2d;
+		color: #f5effa;
+		border-color: #51435e;
+		box-shadow: 0 5px 22px rgb(0 0 0 / 45%);
+	}
+
+	html.dark .mindmap-floating-toolbar button {
+		background: #393044;
+		color: #f5effa;
+		border-color: #574966;
+	}
+
+	html.dark .mindmap-floating-toolbar button:active {
+		background: #51415f;
+	}
+
+	html.dark .mindmap-floating-toolbar button.active {
+		background: #916bb1;
+		border-color: #916bb1;
+		color: #ffffff;
+	}
+
+	html.dark .mindmap-toolbar-divider {
+		background: #574966;
+	}
+
+	html.dark .mindmap-toolbar-drag span {
+		background: #b9a8c8;
+	}
+
+	html.dark .tool-bar-del button {
+		border-color: #ff4d7f;
+		color: #ff4d7f;
+		background-color: #ff000000;
+	}
+}
+
+/* Tablet sidebar controls */
+@media (min-width: 768px) and (max-width: 1023px) {
+	.mindmap-sidebar-toggle {
+		gap: 5px !important;
+		padding: 6px 8px !important;
+		font-size: 10px !important;
+		border-radius: 8px !important;
+	}
+
+	.mindmap-sidebar-toggle svg {
+		width: 14px;
+		height: 14px;
+	}
+
+	.mindmap-sidebar-toggle span {
+		font-size: 9px;
+	}
+
+	/* Keep the controls close to the screen edge */
+	.mindmap-editor .mindmap-sidebar-toggle {
+		min-height: 32px;
+	}
+}

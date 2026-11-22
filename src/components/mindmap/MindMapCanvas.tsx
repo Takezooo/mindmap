@@ -40,11 +40,22 @@ function MindMapFlow() {
 	const [gridVisible, setGridVisible] = useState(true);
 	const [snapEnabled, setSnapEnabled] = useState(true);
 
+	const [selectionMode, setSelectionMode] = useState(false);
+
+	const [toolbarOffset, setToolbarOffset] = useState({ x: 0, y: 0 });
+
+	const toolbarDragStart = useRef<{
+		pointerX: number;
+		pointerY: number;
+		offsetX: number;
+		offsetY: number;
+	} | null>(null);
+
 	const gridSize: [number, number] = [24, 24];
 
 	const setNodes = useMindMapStore((state) => state.setNodes);
 	const setEdges = useMindMapStore((state) => state.setEdges);
-	const selectNode = useMindMapStore((state) => state.selectNode);
+	//const selectNode = useMindMapStore((state) => state.selectNode);
 	const setActiveNodeId = useMindMapStore((state) => state.setActiveNodeId);
 
 	const { setCenter, getNode, fitView: fitViewToCanvas } = useReactFlow();
@@ -162,6 +173,15 @@ function MindMapFlow() {
 				return;
 			}
 
+			// W: Toggle selection mode
+			if (!modifier && !event.altKey && key === "w") {
+				event.preventDefault();
+				event.stopPropagation();
+
+				setSelectionMode((current) => !current);
+				return;
+			}
+
 			// CTRL + A / CMD + A: Select all nodes.
 			if (modifier && key === "a") {
 				event.preventDefault();
@@ -244,7 +264,7 @@ function MindMapFlow() {
 		return () => {
 			window.removeEventListener("keydown", handleKeyboardShortcuts);
 		};
-	}, [fitViewToCanvas]);
+	}, [fitViewToCanvas, setSelectionMode]);
 
 	useEffect(() => {
 		if (!selectedNodeId) return;
@@ -300,6 +320,36 @@ function MindMapFlow() {
 			window.removeEventListener("mindmap:map-loaded", handleMapLoaded);
 		};
 	}, [getNode, setCenter]);
+
+	function handleToolbarPointerDown(event: React.PointerEvent<HTMLDivElement>) {
+		event.preventDefault();
+
+		toolbarDragStart.current = {
+			pointerX: event.clientX,
+			pointerY: event.clientY,
+			offsetX: toolbarOffset.x,
+			offsetY: toolbarOffset.y,
+		};
+
+		event.currentTarget.setPointerCapture(event.pointerId);
+	}
+
+	// Toolbar functions =============
+
+	function handleToolbarPointerMove(event: React.PointerEvent<HTMLDivElement>) {
+		const start = toolbarDragStart.current;
+		if (!start) return;
+
+		setToolbarOffset({
+			x: start.offsetX + event.clientX - start.pointerX,
+			y: start.offsetY + event.clientY - start.pointerY,
+		});
+	}
+
+	function handleToolbarPointerUp() {
+		toolbarDragStart.current = null;
+	}
+	// =============
 
 	// for arrow connections
 	const handleConnect = useCallback((connection: Connection) => {
@@ -382,7 +432,7 @@ function MindMapFlow() {
 				<button
 					type="button"
 					onClick={() => setGridVisible((current) => !current)}
-					className={`rounded-lg border px-3 py-2 text-xs font-medium shadow-sm mindmap-canvas-tool ${
+					className={`mindmap-sidebar-toggle rounded-lg border px-3 py-2 text-xs font-medium shadow-sm mindmap-canvas-tool ${
 						gridVisible ? "mindmap-canvas-tool-active" : ""
 					}`}
 				>
@@ -393,7 +443,7 @@ function MindMapFlow() {
 				<button
 					type="button"
 					onClick={() => setSnapEnabled((current) => !current)}
-					className={`rounded-lg border px-3 py-2 text-xs font-medium shadow-sm mindmap-canvas-tool ${
+					className={`mindmap-sidebar-toggle rounded-lg border px-3 py-2 text-xs font-medium shadow-sm mindmap-canvas-tool ${
 						snapEnabled ? "mindmap-canvas-tool-active" : ""
 					}`}
 				>
@@ -401,22 +451,183 @@ function MindMapFlow() {
 					<span className="ml-2 opacity-60">Shift+G</span>
 				</button>
 			</div>
+			{/* Tablet-friendly floating toolbar */}
+			<div
+				className="mindmap-floating-toolbar"
+				style={{
+					transform: `translate(calc(-50% + ${toolbarOffset.x}px), ${toolbarOffset.y}px)`,
+				}}
+			>
+				{/* Drag handle */}
+				<div
+					className="mindmap-toolbar-drag"
+					onPointerDown={handleToolbarPointerDown}
+					onPointerMove={handleToolbarPointerMove}
+					onPointerUp={handleToolbarPointerUp}
+					onPointerCancel={handleToolbarPointerUp}
+					title="Drag toolbar"
+					aria-label="Drag toolbar"
+				>
+					<span />
+					<span />
+					<span />
+				</div>
+				<button
+					type="button"
+					onClick={() => {
+						if (!selectedNodeId) return;
+						useMindMapStore.getState().addParent(selectedNodeId);
+					}}
+					disabled={!selectedNodeId}
+				>
+					↑ Parent
+				</button>
+
+				<button
+					type="button"
+					onClick={() => {
+						if (!selectedNodeId) return;
+						useMindMapStore.getState().addChild(selectedNodeId);
+					}}
+					disabled={!selectedNodeId}
+				>
+					↓ Child
+				</button>
+
+				<button
+					type="button"
+					onClick={() => {
+						if (!selectedNodeId) return;
+						useMindMapStore.getState().addSibling(selectedNodeId);
+					}}
+					disabled={!selectedNodeId}
+				>
+					+ Sibling
+				</button>
+
+				<span className="mindmap-toolbar-divider" />
+
+				<button
+					type="button"
+					onClick={() => useMindMapStore.temporal.getState().undo()}
+				>
+					↶
+				</button>
+
+				<button
+					type="button"
+					onClick={() => useMindMapStore.temporal.getState().redo()}
+				>
+					↷
+				</button>
+
+				<span className="mindmap-toolbar-divider" />
+
+				{/* Same root-focus behavior as keyboard shortcut 1 */}
+				<button
+					type="button"
+					onClick={() => {
+						const firstRootNode = useMindMapStore
+							.getState()
+							.nodes.find((node) => node.data?.parentId == null);
+
+						if (!firstRootNode) return;
+
+						requestAnimationFrame(() => {
+							fitViewToCanvas({
+								nodes: [{ id: firstRootNode.id }],
+								padding: 0.25,
+								duration: 500,
+								maxZoom: 1.2,
+							});
+						});
+					}}
+				>
+					Root Node
+				</button>
+
+				<button
+					type="button"
+					onClick={() => setSelectionMode((current) => !current)}
+					className={selectionMode ? "active" : ""}
+					aria-pressed={selectionMode}
+				>
+					{selectionMode ? "Selecting" : "Select"}
+				</button>
+
+				<button
+					type="button"
+					onClick={() =>
+						fitViewToCanvas({
+							padding: 0.2,
+							duration: 400,
+						})
+					}
+				>
+					Fit
+				</button>
+				<div className="tool-bar-del">
+					<button
+						type="button"
+						onClick={() => {
+							const state = useMindMapStore.getState();
+
+							const selectedNodeIds = state.nodes
+								.filter((node) => node.selected)
+								.map((node) => node.id);
+
+							const selectedEdgeIds = state.edges
+								.filter((edge) => edge.selected)
+								.map((edge) => edge.id);
+
+							if (selectedNodeIds.length > 0) {
+								state.deleteNodes(selectedNodeIds);
+							}
+
+							if (selectedEdgeIds.length > 0) {
+								const latestState = useMindMapStore.getState();
+
+								latestState.setEdges(
+									latestState.edges.filter(
+										(edge) => !selectedEdgeIds.includes(edge.id),
+									),
+								);
+							}
+						}}
+						disabled={
+							!nodes.some((node) => node.selected) &&
+							!edges.some((edge) => edge.selected)
+						}
+						aria-label="Delete selected items"
+					>
+						Del
+					</button>
+				</div>
+			</div>
 			<ReactFlow<Node<MindMapNodeData>>
 				nodes={nodes}
 				edges={edges}
 				nodeTypes={nodeTypes}
 				deleteKeyCode={null}
+				onReconnect={handleReconnect} // reconnection of  arrrows
 				edgesReconnectable={true}
-				onConnect={handleConnect}
-				onReconnect={handleReconnect}
+				onConnect={handleConnect} // add connection
 				onNodesChange={handleNodesChange}
 				onEdgesChange={handleEdgesChange}
 				onNodeDragStart={handleNodeDragStart}
 				snapToGrid={snapEnabled}
 				snapGrid={gridSize}
+				// for tablet mode ===
+				panOnDrag={!selectionMode}
+				selectionOnDrag={selectionMode}
+				panOnScroll={false}
+				zoomOnPinch={true}
+				zoomOnDoubleClick={false}
+				nodesDraggable={true}
+				nodesConnectable={true}
+				// ===
 				onNodeDragStop={handleNodeDragStop}
 				multiSelectionKeyCode="Control"
-				selectionOnDrag={false}
 				onSelectionChange={({ nodes: selectedNodes }) => {
 					setActiveNodeId(selectedNodes[selectedNodes.length - 1]?.id ?? null);
 				}}
