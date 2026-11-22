@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 import ThemeToggle from "@/components/theme/ThemeToggle";
-import { Menu, Settings, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 
 import MindMapCanvas from "@/components/mindmap/MindMapCanvas";
 
@@ -13,9 +13,8 @@ import NodeProperties from "@/components/mindmap/NodeProperties";
 import MindMapDatabaseSync from "@/components/mindmap/MindMapDatabaseSync";
 import UndoRedoControls from "@/components/mindmap/UndoRedoControls";
 import MapTree from "@/components/sidebar/MapTree";
-
 import MapBackup from "@/components/mindmap/MapBackup";
-
+import HelpButton from "@/components/help/HelpButton";
 import { useMindMapStore } from "@/stores/mindmap-store";
 
 type MobilePanel = "map" | "properties" | null;
@@ -168,35 +167,15 @@ export default function EditorPage() {
 					{/* DESKTOP SIDEBAR TOGGLES */}
 
 					<div className="absolute right-4 top-4 z-20 flex gap-2">
-						<button
-							type="button"
-							onClick={() => setDesktopLeftOpen((current) => !current)}
-							className="mindmap-sidebar-toggle flex items-center gap-2 rounded-lg border border-[#E7DDF0] bg-white px-3 py-2 text-xs font-medium text-[#6F527F] shadow-sm transition hover:bg-[#F1EAFB]"
-							aria-label={
-								desktopLeftOpen ? "Hide map outline" : "Show map outline"
-							}
-							title={desktopLeftOpen ? "Hide map outline" : "Show map outline"}
-						>
-							<Menu size={17} />
-							{desktopLeftOpen ? "Hide Sidebar" : "Show Sidebar"}
-							<span className="opacity-60">: Q</span>
-						</button>
-						<button
-							type="button"
-							onClick={() => setDesktopRightOpen((current) => !current)}
-							className="mindmap-sidebar-toggle flex items-center gap-2 rounded-lg border border-[#E7DDF0] bg-white px-3 py-2 text-xs font-medium text-[#6F527F] shadow-sm transition hover:bg-[#F1EAFB]"
-							aria-label={
-								desktopRightOpen ? "Hide properties" : "Show properties"
-							}
-							title={desktopRightOpen ? "Hide properties" : "Show properties"}
-						>
-							<Settings size={17} />
-							{desktopRightOpen ? "Hide Properties" : "Show Properties"}
-							<span className="opacity-60">: E</span>
-						</button>
+						<HelpButton />
 					</div>
 
-					<MindMapCanvas />
+					<MindMapCanvas
+						onToggleSidebar={() => setDesktopLeftOpen((current) => !current)}
+						onToggleProperties={() =>
+							setDesktopRightOpen((current) => !current)
+						}
+					/>
 				</section>
 
 				{/* RIGHT SIDEBAR */}
@@ -229,23 +208,23 @@ export default function EditorPage() {
 					</h1>
 
 					<div className="flex items-center gap-1">
-						<button
-							type="button"
-							onClick={() => {
-								setMobilePanel("properties");
-							}}
-							className="rounded-lg p-2 text-[#6F527F] hover:bg-[#F1EAFB]"
-							aria-label="Open properties"
-						>
-							<Settings size={19} />
-						</button>
+						<HelpButton />
 					</div>
 				</header>
 
 				{/* MOBILE CANVAS */}
 
 				<section className="min-h-0 flex-1 bg-[#F8F4FC]">
-					<MindMapCanvas />
+					<MindMapCanvas
+						onToggleSidebar={() =>
+							setMobilePanel((current) => (current === "map" ? null : "map"))
+						}
+						onToggleProperties={() =>
+							setMobilePanel((current) =>
+								current === "properties" ? null : "properties",
+							)
+						}
+					/>
 				</section>
 			</div>
 
