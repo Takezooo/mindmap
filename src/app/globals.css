@@ -1,23 +1,49 @@
 @import "tailwindcss";
 
+/* =========================================
+   THEME VARIABLES
+========================================= */
+
 :root {
-	--background: #fffafc;
-	--foreground: #3f3540;
+	--background: #faf7ff;
+	--foreground: #493c55;
 
-	--primary: #eee9f7;
-	--primary-dark: #c0a2f8;
-	--primary-light: #f4eeff;
+	--primary: #eee7f7;
+	--primary-dark: #9b7ebd;
+	--primary-light: #f8f3fc;
 
-	--secondary: #a99acb;
-	--secondary-light: #eee9f7;
+	--secondary: #a98acb;
+	--secondary-light: #eee7f7;
 
-	--accent: #e9a9bf;
-	--accent-light: #fdeef3;
+	--accent: #c49acb;
+	--accent-light: #f5edf8;
 
-	--border: #eadde4;
-	--muted: #8d7d87;
+	--border: #dccbe8;
+	--muted: #887b91;
 
-	--canvas: #fcf7fa;
+	--canvas: #fcfaff;
+}
+
+html.dark {
+	color-scheme: dark;
+
+	--background: #17131f;
+	--foreground: #eee7f5;
+
+	--primary: #30283c;
+	--primary-dark: #916bb1;
+	--primary-light: #40334e;
+
+	--secondary: #b8a8c6;
+	--secondary-light: #493b55;
+
+	--accent: #c49acb;
+	--accent-light: #3b3047;
+
+	--border: #51405f;
+	--muted: #b8a8c6;
+
+	--canvas: #191521;
 }
 
 @theme inline {
@@ -27,17 +53,205 @@
 	--font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-	:root {
-		--background: #0a0a0a;
-		--foreground: #ededed;
-	}
-}
-
 body {
 	background: var(--background);
 	color: var(--foreground);
 	font-family: Arial, Helvetica, sans-serif;
+}
+
+/* =========================================
+   SHARED POPUP THEME
+========================================= */
+
+.app-popup-overlay {
+	background: rgb(63 53 69 / 30%);
+	backdrop-filter: blur(12px);
+	-webkit-backdrop-filter: blur(12px);
+}
+
+.dark .app-popup-overlay {
+	background: rgb(10 7 15 / 45%);
+}
+
+/* Popup surface */
+.app-themed-popup {
+	background: #ffffff;
+	color: #5e456f;
+	border: 1px solid #e5d8ef;
+	border-radius: 18px;
+	box-shadow:
+		0 12px 50px rgb(111 82 127 / 14%),
+		0 2px 8px rgb(111 82 127 / 6%);
+}
+
+/* Dark popup surface */
+.dark .app-themed-popup {
+	background: #30283c;
+	color: #e8dff0;
+	border-color: #51405f;
+	box-shadow:
+		0 12px 50px rgb(0 0 0 / 35%),
+		0 2px 8px rgb(0 0 0 / 20%);
+}
+
+/* Header */
+.app-themed-popup-header {
+	background: #faf7ff;
+	border-bottom: 1px solid #e7ddf0;
+	color: #6f527f;
+}
+
+.dark .app-themed-popup-header {
+	background: #211b2a;
+	border-bottom-color: #51405f;
+	color: #b8a8c6;
+}
+
+/* Content */
+.app-themed-popup-content {
+	background: #ffffff;
+	color: #5e456f;
+}
+
+.dark .app-themed-popup-content {
+	background: #30283c;
+	color: #e8dff0;
+}
+
+/* Headings */
+.app-themed-popup-heading {
+	color: #6f527f;
+}
+
+.dark .app-themed-popup-heading {
+	color: #dfc5f4;
+}
+
+/* Muted text */
+.app-themed-popup-muted {
+	color: #887b91;
+}
+
+.dark .app-themed-popup-muted {
+	color: #b8a8c6;
+}
+
+/* Close button */
+.app-themed-popup-close {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	border: 1px solid #e5d8ef;
+	border-radius: 9999px;
+	background: #ffffff;
+	color: #6f527f;
+	transition: all 200ms ease;
+}
+
+.app-themed-popup-close:hover {
+	background: #f1eafb;
+	color: #5e3f79;
+}
+
+.dark .app-themed-popup-close {
+	border-color: #51405f;
+	background: #30283c;
+	color: #b8a8c6;
+}
+
+.dark .app-themed-popup-close:hover {
+	background: #40334e;
+	color: #e8dff0;
+}
+
+/* Rows */
+.app-themed-popup-row {
+	background: #faf7ff;
+	border: 1px solid #e7ddf0;
+	border-radius: 9px;
+	color: #6f527f;
+}
+
+.dark .app-themed-popup-row {
+	background: #40334e;
+	border-color: #51405f;
+	color: #e8dff0;
+}
+
+/* Keyboard keys */
+.app-themed-popup-key {
+	background: #ffffff;
+	border: 1px solid #dccbe8;
+	border-radius: 6px;
+	color: #6f527f;
+}
+
+.dark .app-themed-popup-key {
+	background: #211b2a;
+	border-color: #51405f;
+	color: #dfc5f4;
+}
+
+/* Popup content text */
+.app-themed-popup-content p,
+.app-themed-popup-content li {
+	color: #5e456f;
+}
+
+.dark .app-themed-popup-content p,
+.dark .app-themed-popup-content li {
+	color: #e8dff0;
+}
+
+/* Popup section headings */
+.popup-section-heading {
+	color: #6f527f;
+}
+
+.dark .popup-section-heading {
+	color: #dfc5f4;
+}
+
+/* Popup divider */
+.popup-content-divider {
+	border-color: #e7ddf0;
+}
+
+.dark .popup-content-divider {
+	border-color: #51405f;
+}
+
+/* Roadmap cards */
+.app-themed-popup-content .roadmap-card {
+	background: #f8f3fc;
+	border: 1px solid #dccbe8;
+	color: #5e456f;
+}
+
+.dark .app-themed-popup-content .roadmap-card {
+	background: #30283c;
+	border-color: #695477;
+	color: #e8dff0;
+}
+
+/* Roadmap status label */
+.roadmap-status {
+	background: #e9ddf4;
+	color: #6f527f;
+}
+
+.dark .roadmap-status {
+	background: #493b55;
+	color: #dfc5f4;
+}
+
+/* Roadmap checkbox outline */
+.roadmap-checkbox {
+	border: 1px solid #a98acb;
+}
+
+.dark .roadmap-checkbox {
+	border-color: #b18bcf;
 }
 
 /* =========================================
@@ -97,6 +311,68 @@ html.dark {
 /* Hover backgrounds */
 .dark .mindmap-editor [class~="hover:bg-[#F1EAFB]"]:hover {
 	background-color: #40334e !important;
+}
+
+/* =========================================
+   HOMEPAGE UTILITY BUTTONS
+========================================= */
+
+.landing-utility-button {
+	display: inline-flex;
+	width: 36px;
+	height: 36px;
+	align-items: center;
+	justify-content: center;
+	border: 1px solid #dccbe8;
+	border-radius: 9999px;
+	background: rgb(255 255 255 / 80%);
+	color: #6f527f;
+	box-shadow: 0 2px 8px rgb(111 82 127 / 8%);
+	transition: all 200ms ease;
+}
+
+.landing-utility-button:hover {
+	background: #f1eafb;
+	color: #6f527f;
+}
+
+.dark .landing-utility-button {
+	border-color: #51405f;
+	background: #30283c;
+	color: #b8a8c6;
+}
+
+.dark .landing-utility-button:hover {
+	background: #40334e;
+	color: #e8dff0;
+}
+
+/* =========================================
+   FLOWER GLOW
+========================================= */
+
+.landing-flower-glow {
+	background: radial-gradient(
+		ellipse at center,
+		rgb(177 139 218 / 75%) 0%,
+		rgb(196 157 226 / 50%) 35%,
+		rgb(216 184 235 / 25%) 60%,
+		transparent 78%
+	);
+	opacity: 1;
+	filter: blur(38px);
+}
+
+.dark .landing-flower-glow {
+	background: radial-gradient(
+		ellipse at center,
+		rgb(173 119 224 / 75%) 0%,
+		rgb(139 91 191 / 50%) 35%,
+		rgb(100 65 145 / 30%) 60%,
+		transparent 78%
+	);
+	opacity: 1;
+	filter: blur(42px);
 }
 
 /* =========================================
@@ -353,8 +629,33 @@ html.dark {
 	opacity: 0.6;
 }
 
-.dark .landing-page a {
+.dark .landing-page a:not(.landing-open-button) {
 	box-shadow: 0 8px 24px rgb(0 0 0 / 20%);
+}
+
+/* Open mind map glow */
+.landing-page .landing-open-button {
+	box-shadow:
+		0 0 18px rgb(155 126 189 / 45%),
+		0 0 28px rgb(155 126 189 / 25%);
+}
+
+.landing-page .landing-open-button:hover {
+	box-shadow:
+		0 0 25px rgb(155 126 189 / 50%),
+		0 0 48px rgb(155 126 189 / 40%);
+}
+
+.dark .landing-page .landing-open-button {
+	box-shadow:
+		0 0 20px rgb(173 119 224 / 55%),
+		0 0 28px rgb(155 105 204 / 35%);
+}
+
+.dark .landing-page .landing-open-button:hover {
+	box-shadow:
+		0 0 28px rgb(173 119 224 / 50%),
+		0 0 48px rgb(155 105 204 / 50%);
 }
 
 /* =========================================
@@ -426,7 +727,11 @@ html.dark {
 	color: #dfc5f4 !important;
 }
 
-/* Mind map loading overlay - Light mode */
+/* =========================================
+   MIND MAP LOADING OVERLAY
+========================================= */
+
+/* Light mode */
 .mindmap-loading-overlay {
 	background-color: rgb(250 247 255 / 95%);
 }
@@ -439,7 +744,7 @@ html.dark {
 	color: #887b91;
 }
 
-/* Mind map loading overlay - Dark mode */
+/* Dark mode */
 .dark .mindmap-loading-overlay {
 	background-color: rgb(23 19 31 / 95%);
 }
@@ -450,4 +755,642 @@ html.dark {
 
 .dark .mindmap-loading-muted {
 	color: #b8a8c6;
+}
+
+/* ========================================
+   NODE PROPERTIES - LIGHT MODE
+======================================== */
+
+.node-properties-panel {
+	background-color: #ffffff;
+	color: #6f527f;
+}
+
+.node-properties-header {
+	border-color: #eadde4;
+}
+
+.node-properties-heading {
+	color: #6f527f;
+}
+
+.node-properties-muted {
+	color: #887b91;
+}
+
+.node-properties-field {
+	background-color: #fffafc;
+	color: #6f527f;
+	border-color: #eadde4;
+	caret-color: #8f5f76;
+}
+
+.node-properties-field::placeholder {
+	color: #a99aa3;
+	opacity: 1;
+}
+
+.node-properties-field:focus {
+	border-color: #eadde4;
+	outline: none;
+	box-shadow: 0 0 0 2px #f6dce7;
+}
+
+.node-properties-field option {
+	background-color: #ffffff;
+	color: #6f527f;
+}
+
+.node-properties-delete {
+	border-color: #eadde4;
+}
+
+.node-properties-delete button {
+	border-color: #c05f78;
+	color: #c05f78;
+}
+
+.node-properties-delete button:hover {
+	background-color: #fff1f4;
+}
+
+/* ========================================
+   NODE PROPERTIES - DARK MODE
+======================================== */
+
+html.dark .node-properties-panel {
+	background-color: #211c2a;
+	color: #f0e8f5;
+}
+
+html.dark .node-properties-header {
+	border-color: #403449;
+}
+
+html.dark .node-properties-heading {
+	color: #d6b3e8;
+}
+
+html.dark .node-properties-muted {
+	color: #bbaec5;
+}
+
+html.dark .node-properties-field {
+	background-color: #30283c;
+	color: #f5eef9;
+	border-color: #51445e;
+	caret-color: #d6b3e8;
+}
+
+html.dark .node-properties-field::placeholder {
+	color: #bbaec5;
+	opacity: 1;
+}
+
+html.dark .node-properties-field:focus {
+	border-color: #b58bcf;
+	box-shadow: 0 0 0 2px rgb(181 139 207 / 20%);
+}
+
+html.dark .node-properties-field option {
+	background-color: #30283c;
+	color: #f5eef9;
+}
+
+html.dark .node-properties-delete {
+	border-color: #403449;
+}
+
+html.dark .node-properties-delete button {
+	border-color: #754452;
+	color: #f09baf;
+}
+
+html.dark .node-properties-delete button:hover {
+	background-color: #452a36;
+}
+
+html.dark .node-properties-color-selected {
+	--tw-ring-offset-color: #211c2a;
+}
+
+/* =========================================
+   MAP OUTLINE - LIGHT MODE
+========================================= */
+
+.map-tree-item {
+	color: #3f3545;
+	transition:
+		background-color 150ms ease,
+		color 150ms ease;
+}
+
+.map-tree-item:hover {
+	background-color: #f1eafb;
+}
+
+.map-tree-item-selected {
+	background-color: #e9def5;
+	color: #5e3f79;
+	font-weight: 600;
+}
+
+.map-tree-item-selected:hover {
+	background-color: #e2d4f0;
+}
+
+.map-tree-expand {
+	color: #887b91;
+}
+
+.map-tree-expand:hover {
+	background-color: #e9def5;
+	color: #6f527f;
+}
+
+.map-tree-label {
+	color: inherit;
+}
+
+/* =========================================
+   MAP OUTLINE - DARK MODE
+========================================= */
+
+html.dark .map-tree-item {
+	color: #e8dff0;
+}
+
+html.dark .map-tree-item:hover {
+	background-color: #352b40;
+}
+
+html.dark .map-tree-item-selected {
+	background-color: #51405f;
+	color: #ffffff;
+	font-weight: 600;
+	box-shadow: inset 3px 0 0 #c7a6ea;
+}
+
+html.dark .map-tree-item-selected:hover {
+	background-color: #5b476b;
+}
+
+html.dark .map-tree-expand {
+	color: #bba9ca;
+}
+
+html.dark .map-tree-expand:hover {
+	background-color: #40334e;
+	color: #ffffff;
+}
+
+/* =========================================
+   CANVAS TOOL BUTTONS - LIGHT MODE
+========================================= */
+
+.mindmap-canvas-tool {
+	border: 1px solid #d9c9e5;
+	border-radius: 8px;
+	background-color: #ffffff;
+	color: #6f527f;
+	padding: 8px 12px;
+	font-size: 12px;
+	font-weight: 500;
+	box-shadow: 0 2px 5px rgb(63 53 69 / 8%);
+	transition:
+		background-color 150ms ease,
+		border-color 150ms ease;
+}
+
+.mindmap-canvas-tool:hover {
+	background-color: #f1eafb;
+}
+
+.mindmap-canvas-tool-active {
+	background-color: #e9def5;
+	border-color: #a98acb;
+	color: #5e3f79;
+}
+
+/* =========================================
+   CANVAS TOOL BUTTONS - DARK MODE
+========================================= */
+
+html.dark .mindmap-canvas-tool {
+	background-color: #30283c;
+	border-color: #51405f;
+	color: #e8dff0;
+	box-shadow: 0 2px 5px rgb(0 0 0 / 20%);
+}
+
+html.dark .mindmap-canvas-tool:hover {
+	background-color: #40334e;
+}
+
+html.dark .mindmap-canvas-tool-active {
+	background-color: #51405f;
+	border-color: #a98acb;
+	color: #ffffff;
+}
+
+/* =========================================
+   REACT FLOW CONTROLS - LIGHT MODE
+========================================= */
+
+.mindmap-editor .react-flow__controls {
+	background-color: #ffffff;
+	border: 1px solid #d9c9e5;
+	border-radius: 8px;
+	overflow: hidden;
+	box-shadow: 0 2px 8px rgb(63 53 69 / 12%);
+}
+
+.mindmap-editor .react-flow__controls-button {
+	background-color: #ffffff;
+	color: #6f527f;
+	border-bottom: 1px solid #eadde4;
+}
+
+.mindmap-editor .react-flow__controls-button:hover {
+	background-color: #f1eafb;
+}
+
+.mindmap-editor .react-flow__controls-button svg {
+	fill: none;
+	stroke: currentColor;
+}
+
+.mindmap-editor .react-flow__controls-button:last-child {
+	border-bottom: none;
+}
+
+/* =========================================
+   REACT FLOW CONTROLS - DARK MODE
+========================================= */
+
+html.dark .mindmap-editor .react-flow__controls {
+	background-color: #30283c;
+	border-color: #51405f;
+	box-shadow: 0 2px 8px rgb(0 0 0 / 30%);
+}
+
+html.dark .mindmap-editor .react-flow__controls-button {
+	background-color: #30283c;
+	color: #e8dff0;
+	border-bottom-color: #51405f;
+}
+
+html.dark .mindmap-editor .react-flow__controls-button:hover {
+	background-color: #51405f;
+}
+
+/* =========================================
+   REACT FLOW MINIMAP - DARK MODE
+========================================= */
+
+html.dark .mindmap-editor .react-flow__minimap {
+	background-color: #30283c;
+	border: 1px solid #51405f;
+}
+
+html.dark .mindmap-editor .react-flow__minimap-mask {
+	fill: rgb(23 19 31 / 65%);
+}
+
+/* =========================================
+   GRID POINTS - LIGHT MODE
+========================================= */
+
+.mindmap-editor .react-flow__background pattern circle {
+	fill: #b143ff;
+}
+
+/* =========================================
+   GRID POINTS - DARK MODE
+========================================= */
+
+html.dark .mindmap-editor .react-flow__background pattern circle {
+	fill: #f4e4ff !important;
+}
+
+/* Light mode: selected mind map nodes */
+.mindmap-editor .react-flow__node.selected .mindmap-node-card {
+	outline: 2px solid #9b7ebd;
+	outline-offset: 3px;
+	box-shadow: 0 0 0 4px rgb(155 126 189 / 15%);
+}
+
+/* Dark mode: selected mind map nodes */
+.dark .mindmap-editor .react-flow__node.selected .mindmap-node-card {
+	outline-color: #c7a6ea;
+	box-shadow: 0 0 0 4px rgb(199 166 234 / 20%);
+}
+
+/* Tablet and touchscreen connection handles */
+@media (pointer: coarse) {
+	.react-flow .react-flow__handle {
+		width: 18px;
+		height: 18px;
+		touch-action: none;
+		z-index: 10;
+	}
+
+	.react-flow .react-flow__handle-left {
+		left: -9px;
+	}
+
+	.react-flow .react-flow__handle-right {
+		right: -9px;
+	}
+
+	.react-flow .react-flow__handle-top {
+		top: -9px;
+	}
+
+	.react-flow .react-flow__handle-bottom {
+		bottom: -9px;
+	}
+}
+
+/* =========================================
+   FLOATING TABLET / MOBILE COMPACT FLOATING TOOLBAR
+========================================= */
+
+/* Hidden on desktop and laptop */
+.mindmap-floating-toolbar {
+	display: none;
+}
+
+@media (hover: none) and (pointer: coarse) {
+	/* Hide desktop-only grid controls */
+	.mindmap-desktop-canvas-tools {
+		display: none !important;
+	}
+
+	.mindmap-floating-toolbar {
+		position: absolute;
+		z-index: 30;
+		left: 50%;
+		bottom: 12px;
+
+		display: flex;
+		flex-direction: column;
+		align-items: stretch;
+		gap: 7px;
+
+		width: max-content;
+		max-width: calc(100% - 20px);
+		padding: 7px;
+
+		background: #ffffff;
+		color: #352b3d;
+
+		border: 1px solid #d9cbdc;
+		border-radius: 15px;
+
+		box-shadow: 0 5px 22px rgb(0 0 0 / 16%);
+		transition: box-shadow 150ms ease;
+	}
+
+	/* Primary toolbar row */
+	.mindmap-toolbar-primary {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 4px;
+		min-width: 0;
+	}
+
+	/* Primary icon buttons */
+	.mindmap-floating-toolbar button {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+
+		width: 38px;
+		min-width: 38px;
+		height: 38px;
+		min-height: 38px;
+
+		padding: 0;
+
+		border: 1px solid #e2d8e8;
+		border-radius: 9px;
+
+		background: #f4eff8;
+		color: #554362;
+
+		font-size: 12px;
+		font-weight: 500;
+
+		cursor: pointer;
+		flex-shrink: 0;
+		touch-action: manipulation;
+
+		transition:
+			background-color 150ms ease,
+			border-color 150ms ease,
+			color 150ms ease;
+	}
+
+	.mindmap-floating-toolbar button:active {
+		background: #e6d9ef;
+	}
+
+	.mindmap-floating-toolbar button.active {
+		background: #76518f;
+		border-color: #76518f;
+		color: #ffffff;
+	}
+
+	.mindmap-floating-toolbar button:disabled {
+		opacity: 0.35;
+		cursor: not-allowed;
+	}
+
+	/* Delete */
+	.mindmap-floating-toolbar .mindmap-toolbar-delete {
+		color: #c04465;
+		background: #fff3f5;
+		border-color: #f0c6d0;
+	}
+
+	.mindmap-floating-toolbar .mindmap-toolbar-delete:active {
+		background: #f9dce4;
+	}
+
+	/* More button */
+	.mindmap-floating-toolbar .mindmap-toolbar-more {
+		background: #eee5f5;
+		color: #684782;
+	}
+
+	/* Drag handle */
+	.mindmap-toolbar-drag {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+
+		width: 25px;
+		min-width: 25px;
+		height: 38px;
+
+		cursor: grab;
+		touch-action: none;
+		user-select: none;
+		flex-shrink: 0;
+	}
+
+	.mindmap-toolbar-drag:active {
+		cursor: grabbing;
+	}
+
+	.mindmap-toolbar-drag svg {
+		color: #897995;
+	}
+
+	/* Divider */
+	.mindmap-toolbar-divider {
+		width: 1px;
+		height: 23px;
+		margin: 0 2px;
+		background: #ded3e4;
+		flex-shrink: 0;
+	}
+
+	/* Expandable panel */
+	.mindmap-toolbar-secondary {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 6px;
+
+		padding-top: 7px;
+		border-top: 1px solid #e6dce9;
+	}
+
+	.mindmap-toolbar-secondary button {
+		width: 100%;
+		min-width: 0;
+		min-height: 38px;
+		height: 38px;
+
+		justify-content: flex-start;
+		gap: 7px;
+
+		padding: 0 10px;
+		font-size: 11px;
+		white-space: nowrap;
+	}
+
+	.mindmap-toolbar-secondary button.active {
+		background: #76518f;
+		border-color: #76518f;
+		color: #ffffff;
+	}
+
+	/* Dark mode */
+	html.dark .mindmap-floating-toolbar {
+		background: #241e2d;
+		color: #f5effa;
+		border-color: #51435e;
+		box-shadow: 0 5px 22px rgb(0 0 0 / 40%);
+	}
+
+	html.dark .mindmap-floating-toolbar button {
+		background: #393044;
+		color: #f5effa;
+		border-color: #574966;
+	}
+
+	html.dark .mindmap-floating-toolbar button:active {
+		background: #51415f;
+	}
+
+	html.dark .mindmap-floating-toolbar button.active {
+		background: #916bb1;
+		border-color: #916bb1;
+		color: #ffffff;
+	}
+
+	html.dark .mindmap-floating-toolbar .mindmap-toolbar-delete {
+		background: #3b2633;
+		border-color: #754452;
+		color: #ff9db3;
+	}
+
+	html.dark .mindmap-floating-toolbar .mindmap-toolbar-more {
+		background: #51405f;
+		color: #ffffff;
+	}
+
+	html.dark .mindmap-toolbar-drag svg {
+		color: #b9a8c8;
+	}
+
+	html.dark .mindmap-toolbar-divider,
+	html.dark .mindmap-toolbar-secondary {
+		border-top-color: #574966;
+	}
+
+	html.dark .mindmap-toolbar-divider {
+		background: #574966;
+	}
+}
+
+/* Smaller phones */
+@media (hover: none) and (pointer: coarse) and (max-width: 420px) {
+	.mindmap-floating-toolbar {
+		bottom: 8px;
+		padding: 5px;
+		gap: 5px;
+	}
+
+	.mindmap-toolbar-primary {
+		gap: 2px;
+	}
+
+	.mindmap-floating-toolbar button {
+		width: 34px;
+		min-width: 34px;
+		height: 36px;
+		min-height: 36px;
+	}
+
+	.mindmap-toolbar-drag {
+		width: 20px;
+		min-width: 20px;
+	}
+
+	.mindmap-toolbar-secondary button {
+		height: 36px;
+		min-height: 36px;
+		padding: 0 7px;
+		font-size: 10px;
+	}
+}
+
+/* ========================================= */
+
+/* Tablet sidebar controls */
+@media (min-width: 1024px) and (max-width: 1339px) {
+	.mindmap-sidebar-toggle {
+		gap: 5px !important;
+		padding: 6px 8px !important;
+		font-size: 10px !important;
+		border-radius: 8px !important;
+	}
+
+	.mindmap-sidebar-toggle svg {
+		width: 14px;
+		height: 14px;
+	}
+
+	.mindmap-sidebar-toggle span {
+		font-size: 9px;
+	}
+
+	/* Keep the controls close to the screen edge */
+	.mindmap-editor .mindmap-sidebar-toggle {
+		min-height: 32px;
+	}
 }

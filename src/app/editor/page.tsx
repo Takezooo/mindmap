@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 import ThemeToggle from "@/components/theme/ThemeToggle";
-import { Menu, Settings, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 
 import MindMapCanvas from "@/components/mindmap/MindMapCanvas";
 
@@ -13,9 +13,8 @@ import NodeProperties from "@/components/mindmap/NodeProperties";
 import MindMapDatabaseSync from "@/components/mindmap/MindMapDatabaseSync";
 import UndoRedoControls from "@/components/mindmap/UndoRedoControls";
 import MapTree from "@/components/sidebar/MapTree";
-
 import MapBackup from "@/components/mindmap/MapBackup";
-
+import HelpButton from "@/components/help/HelpButton";
 import { useMindMapStore } from "@/stores/mindmap-store";
 
 type MobilePanel = "map" | "properties" | null;
@@ -34,8 +33,8 @@ export default function EditorPage() {
 
 	useEffect(() => {
 		function handleSidebarShortcuts(event: KeyboardEvent) {
-			
-			const modifier = event.ctrlKey || event.metaKey || event.altKey || event.shiftKey;
+			const modifier =
+				event.ctrlKey || event.metaKey || event.altKey || event.shiftKey;
 			const key = event.key.toLowerCase();
 			const target = event.target;
 
@@ -69,6 +68,34 @@ export default function EditorPage() {
 		};
 	}, []);
 
+	useEffect(() => {
+		const tabletQuery = window.matchMedia(
+			"(min-width: 768px) and (max-width: 1023px)",
+		);
+
+		const handleTabletChange = (event: MediaQueryListEvent) => {
+			if (event.matches) {
+				setDesktopLeftOpen(false);
+				setDesktopRightOpen(false);
+			} else {
+				setDesktopLeftOpen(true);
+				setDesktopRightOpen(true);
+			}
+		};
+
+		// Apply the initial layout.
+		if (tabletQuery.matches) {
+			setDesktopLeftOpen(false);
+			setDesktopRightOpen(false);
+		}
+
+		tabletQuery.addEventListener("change", handleTabletChange);
+
+		return () => {
+			tabletQuery.removeEventListener("change", handleTabletChange);
+		};
+	}, []);
+
 	return (
 		<main className="mindmap-editor h-[100dvh] overflow-hidden bg-[#FAF7FF] text-[#3F3545]">
 			<MindMapDatabaseSync />
@@ -82,12 +109,12 @@ export default function EditorPage() {
 					<aside className="flex w-72 shrink-0 flex-col border-r border-[#E7DDF0] bg-white">
 						<div className="flex items-center justify-between gap-2 border-b border-[#E7DDF0] p-4">
 							<div>
-								<h1
-									className="cursor-pointer text-lg font-semibold text-[#6F527F]"
+								<h2
+									className="text-lg cursor-pointer font-bold text-[#6F527F]"
 									onClick={() => router.push("/dashboard")}
 								>
 									Riri's Mind Map
-								</h1>
+								</h2>
 
 								<p className="mt-1 text-xs text-[#887B91]">
 									For you review, FIGHTING!
@@ -140,35 +167,15 @@ export default function EditorPage() {
 					{/* DESKTOP SIDEBAR TOGGLES */}
 
 					<div className="absolute right-4 top-4 z-20 flex gap-2">
-						<button
-							type="button"
-							onClick={() => setDesktopLeftOpen((current) => !current)}
-							className="flex items-center gap-2 rounded-lg border border-[#E7DDF0] bg-white px-3 py-2 text-xs font-medium text-[#6F527F] shadow-sm transition hover:bg-[#F1EAFB]"
-							aria-label={
-								desktopLeftOpen ? "Hide map outline" : "Show map outline"
-							}
-							title={desktopLeftOpen ? "Hide map outline" : "Show map outline"}
-						>
-							<Menu size={17} />
-							{desktopLeftOpen ? "Hide Sidebar" : "Show Sidebar"}
-							<span className="opacity-60">: Q</span>
-						</button>
-						<button
-							type="button"
-							onClick={() => setDesktopRightOpen((current) => !current)}
-							className="flex items-center gap-2 rounded-lg border border-[#E7DDF0] bg-white px-3 py-2 text-xs font-medium text-[#6F527F] shadow-sm transition hover:bg-[#F1EAFB]"
-							aria-label={
-								desktopRightOpen ? "Hide properties" : "Show properties"
-							}
-							title={desktopRightOpen ? "Hide properties" : "Show properties"}
-						>
-							<Settings size={17} />
-							{desktopRightOpen ? "Hide Properties" : "Show Properties"}
-							<span className="opacity-60">: E</span>
-						</button>
+						<HelpButton />
 					</div>
 
-					<MindMapCanvas />
+					<MindMapCanvas
+						onToggleSidebar={() => setDesktopLeftOpen((current) => !current)}
+						onToggleProperties={() =>
+							setDesktopRightOpen((current) => !current)
+						}
+					/>
 				</section>
 
 				{/* RIGHT SIDEBAR */}
@@ -201,23 +208,23 @@ export default function EditorPage() {
 					</h1>
 
 					<div className="flex items-center gap-1">
-						<button
-							type="button"
-							onClick={() => {
-								setMobilePanel("properties");
-							}}
-							className="rounded-lg p-2 text-[#6F527F] hover:bg-[#F1EAFB]"
-							aria-label="Open properties"
-						>
-							<Settings size={19} />
-						</button>
+						<HelpButton />
 					</div>
 				</header>
 
 				{/* MOBILE CANVAS */}
 
 				<section className="min-h-0 flex-1 bg-[#F8F4FC]">
-					<MindMapCanvas />
+					<MindMapCanvas
+						onToggleSidebar={() =>
+							setMobilePanel((current) => (current === "map" ? null : "map"))
+						}
+						onToggleProperties={() =>
+							setMobilePanel((current) =>
+								current === "properties" ? null : "properties",
+							)
+						}
+					/>
 				</section>
 			</div>
 

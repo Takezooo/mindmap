@@ -695,7 +695,7 @@ export default function DashboardPage() {
 					</div>
 
 					<div className="min-w-0 flex-1">
-						<h3 className="break-words font-semibold text-[#493C55]">
+						<h3 className="break-words font-semibold text-[#6F527F]">
 							{map.title}
 						</h3>
 
@@ -735,7 +735,7 @@ export default function DashboardPage() {
 							<button
 								type="button"
 								onClick={() => void renameMap(map)}
-								className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-[#493C55] hover:bg-[#F8F4FC]"
+								className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-[#6F527F] hover:bg-[#F8F4FC]"
 							>
 								<Pencil size={16} />
 								Rename map
@@ -753,7 +753,7 @@ export default function DashboardPage() {
 									id={`move-${map.id}`}
 									value={map.folder_id ?? ""}
 									onChange={(event) => void moveMap(map, event.target.value)}
-									className="w-full rounded-lg border border-[#E7DDF0] bg-[#FAF7FF] px-2 py-2 text-sm text-[#493C55]"
+									className="w-full rounded-lg border border-[#E7DDF0] bg-[#FAF7FF] px-2 py-2 text-sm text-[#6F527F]"
 								>
 									<option value="">Uncategorized</option>
 
@@ -768,7 +768,7 @@ export default function DashboardPage() {
 							<button
 								type="button"
 								onClick={() => void toggleMapHidden(map)}
-								className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-[#493C55] hover:bg-[#F8F4FC]"
+								className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-[#6F527F] hover:bg-[#F8F4FC]"
 							>
 								{isHidden ? <Eye size={16} /> : <EyeOff size={16} />}
 
@@ -810,7 +810,7 @@ export default function DashboardPage() {
 					</div>
 
 					<div className="min-w-0 flex-1">
-						<h3 className="break-words font-semibold text-[#493C55]">
+						<h3 className="break-words font-semibold text-[#6F527F]">
 							{folder.name}
 						</h3>
 
@@ -912,7 +912,7 @@ export default function DashboardPage() {
 					{/* Quick Actions */}
 
 					<section className="mb-10">
-						<h2 className="mb-4 text-base font-semibold text-[#493C55]">
+						<h2 className="mb-4 text-base font-semibold text-[#6F527F]">
 							What would you like to do?
 						</h2>
 
@@ -927,7 +927,7 @@ export default function DashboardPage() {
 								</div>
 
 								<div>
-									<h3 className="font-semibold text-[#493C55]">
+									<h3 className="font-semibold text-[#6F527F]">
 										Create a mind map
 									</h3>
 
@@ -949,7 +949,7 @@ export default function DashboardPage() {
 								</div>
 
 								<div>
-									<h3 className="font-semibold text-[#493C55]">
+									<h3 className="font-semibold text-[#6F527F]">
 										Create a subject
 									</h3>
 
@@ -1112,7 +1112,7 @@ export default function DashboardPage() {
 									onClick={() => setSelectedFolderId(folder.id)}
 									className={`max-w-40 truncate ${
 										folder.id === selectedFolderId
-											? "font-semibold text-[#493C55]"
+											? "font-semibold text-[#6F527F]"
 											: "text-[#795F9B] hover:underline"
 									}`}
 								>
@@ -1151,7 +1151,7 @@ export default function DashboardPage() {
 
 					{currentFolders.length > 0 && (
 						<section className="mb-8">
-							<h2 className="mb-4 text-sm font-semibold text-[#493C55]">
+							<h2 className="mb-4 text-sm font-semibold text-[#6F527F]">
 								Folders
 							</h2>
 
@@ -1165,7 +1165,7 @@ export default function DashboardPage() {
 
 					<section>
 						<div className="mb-4 flex items-center justify-between">
-							<h2 className="text-sm font-semibold text-[#493C55]">
+							<h2 className="text-sm font-semibold text-[#6F527F]">
 								Mind maps
 							</h2>
 
@@ -1205,7 +1205,7 @@ export default function DashboardPage() {
 
 					{!selectedFolderId && getMapsInFolder(null).length > 0 && (
 						<section className="mt-8">
-							<h2 className="mb-4 text-sm font-semibold text-[#493C55]">
+							<h2 className="mb-4 text-sm font-semibold text-[#6F527F]">
 								Uncategorized maps
 							</h2>
 
@@ -1244,7 +1244,7 @@ export default function DashboardPage() {
 				{/* Hidden folders */}
 
 				<section className="mb-8">
-					<h2 className="mb-4 text-sm font-semibold text-[#493C55]">
+					<h2 className="mb-4 text-sm font-semibold text-[#6F527F]">
 						Hidden subjects
 					</h2>
 
@@ -1261,7 +1261,7 @@ export default function DashboardPage() {
 										</div>
 
 										<div className="min-w-0">
-											<p className="break-words font-medium text-[#493C55]">
+											<p className="break-words font-medium text-[#6F527F]">
 												{folder.name}
 											</p>
 
@@ -1291,7 +1291,7 @@ export default function DashboardPage() {
 				{/* Hidden maps */}
 
 				<section>
-					<h2 className="mb-4 text-sm font-semibold text-[#493C55]">
+					<h2 className="mb-4 text-sm font-semibold text-[#6F527F]">
 						Hidden mind maps
 					</h2>
 
@@ -1319,7 +1319,7 @@ export default function DashboardPage() {
 				<div className="flex justify-between items-center border-b border-[#E7DDF0] px-5 py-5">
 					<div>
 						<h2
-							className="text-l font-bold text-[#6F527F]"
+							className="text-lg cursor-pointer font-bold text-[#6F527F]"
 							onClick={() => router.push("/")}
 						>
 							Riri's MindMap
@@ -1627,7 +1627,7 @@ export default function DashboardPage() {
 								<div>
 									<label
 										htmlFor="new-folder-name"
-										className="mb-2 block text-sm font-medium text-[#493C55]"
+										className="mb-2 block text-sm font-medium text-[#6F527F]"
 									>
 										Subject name
 									</label>
@@ -1647,7 +1647,7 @@ export default function DashboardPage() {
 								<div>
 									<label
 										htmlFor="folder-parent"
-										className="mb-2 block text-sm font-medium text-[#493C55]"
+										className="mb-2 block text-sm font-medium text-[#6F527F]"
 									>
 										Inside another subject (optional)
 									</label>
@@ -1695,7 +1695,7 @@ export default function DashboardPage() {
 								<div>
 									<label
 										htmlFor="new-map-title"
-										className="mb-2 block text-sm font-medium text-[#493C55]"
+										className="mb-2 block text-sm font-medium text-[#6F527F]"
 									>
 										Mind map name
 									</label>
@@ -1714,7 +1714,7 @@ export default function DashboardPage() {
 								<div>
 									<label
 										htmlFor="new-map-folder"
-										className="mb-2 block text-sm font-medium text-[#493C55]"
+										className="mb-2 block text-sm font-medium text-[#6F527F]"
 									>
 										Save inside
 									</label>

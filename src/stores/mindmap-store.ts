@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { temporal } from "zundo";
-import type { Node, Edge } from "@xyflow/react";
+import type { Node, Edge, Connection } from "@xyflow/react";
 
 import type { MindMapNodeData } from "@/types/mindmap";
 
@@ -27,10 +27,13 @@ interface MindMapState {
 
 	updateNode: (nodeId: string, data: Partial<MindMapNodeData>) => void;
 
+	toggleNodeSelection: (nodeId: string) => void;
+	setActiveNodeId: (nodeId: string | null) => void;
+	deleteNodes: (nodeIds: string[]) => void;
 	deleteNode: (nodeId: string) => void;
 
 	reparentNode: (childId: string, newParentId: string) => void;
-
+	reconnectEdge: (edgeId: string, connection: Connection) => void;
 	replaceMap: (nodes: Node<MindMapNodeData>[], edges: Edge[]) => void;
 }
 
@@ -127,11 +130,43 @@ export const useMindMapStore = create<MindMapState>()(
 				setEdges: (edges) => set({ edges }),
 
 				selectNode: (nodeId) =>
+					set((state) => ({
+						nodes: state.nodes.map((node) => ({
+							...node,
+							selected: node.id === nodeId,
+						})),
+						selectedNodeId: nodeId,
+						descriptionNodeId: null,
+					})),
+
+				setActiveNodeId: (nodeId) =>
 					set({
 						selectedNodeId: nodeId,
 						descriptionNodeId: null,
 					}),
 
+				toggleNodeSelection: (nodeId) =>
+					set((state) => {
+						const clickedNode = state.nodes.find((node) => node.id === nodeId);
+
+						if (!clickedNode) return state;
+
+						const shouldSelect = !clickedNode.selected;
+
+						const updatedNodes = state.nodes.map((node) =>
+							node.id === nodeId ? { ...node, selected: shouldSelect } : node,
+						);
+
+						const selectedNodes = updatedNodes.filter((node) => node.selected);
+
+						return {
+							nodes: updatedNodes,
+							selectedNodeId: shouldSelect
+								? nodeId
+								: (selectedNodes[selectedNodes.length - 1]?.id ?? null),
+							descriptionNodeId: null,
+						};
+					}),
 				openDescription: (nodeId) =>
 					set({
 						selectedNodeId: nodeId,
@@ -406,6 +441,83 @@ export const useMindMapStore = create<MindMapState>()(
 							descriptionNodeId: null,
 						};
 					}),
+				// For multiple deletion
+				deleteNodes: (nodeIds) =>
+					set((state) => {
+						const deletedIds = new Set(nodeIds);
+
+						if (deletedIds.size === 0) return state;
+
+						const originalNodes = state.nodes;
+						const survivingNodes = originalNodes.filter(
+							(node) => !deletedIds.has(node.id),
+						);
+
+						// Reassign surviving descendants to the nearest surviving ancestor.
+						const updatedNodes = survivingNodes.map((node) => {
+							let parentId = node.data.parentId;
+							const visited = new Set<string>();
+
+							while (parentId && deletedIds.has(parentId)) {
+								if (visited.has(parentId)) {
+									parentId = null;
+									break;
+								}
+
+								visited.add(parentId);
+
+								const deletedParent = originalNodes.find(
+									(item) => item.id === parentId,
+								);
+
+								parentId = deletedParent?.data.parentId ?? null;
+							}
+
+							return {
+								...node,
+								selected: false,
+								data: {
+									...node.data,
+									parentId,
+								},
+							};
+						});
+
+						let updatedEdges = state.edges.filter(
+							(edge) =>
+								!deletedIds.has(edge.source) && !deletedIds.has(edge.target),
+						);
+
+						// Rebuild incoming edges for nodes whose parent changed.
+						updatedNodes.forEach((node) => {
+							const originalNode = originalNodes.find(
+								(item) => item.id === node.id,
+							);
+
+							if (originalNode?.data.parentId === node.data.parentId) {
+								return;
+							}
+
+							updatedEdges = updatedEdges.filter(
+								(edge) => edge.target !== node.id,
+							);
+
+							if (node.data.parentId) {
+								updatedEdges.push({
+									id: `${node.data.parentId}-${node.id}`,
+									source: node.data.parentId,
+									target: node.id,
+								});
+							}
+						});
+
+						return {
+							nodes: updatedNodes,
+							edges: updatedEdges,
+							selectedNodeId: null,
+							descriptionNodeId: null,
+						};
+					}),
 
 				// Transfer a child to another parent.
 				reparentNode: (childId, newParentId) =>
@@ -459,6 +571,78 @@ export const useMindMapStore = create<MindMapState>()(
 						};
 					}),
 
+				reconnectEdge: (edgeId, connection) =>
+					set((state) => {
+						const oldEdge = state.edges.find((edge) => edge.id === edgeId);
+
+						const { source, target } = connection;
+
+						if (!oldEdge || !source || !target) return state;
+
+						if (source === target) return state;
+
+						const sourceNode = state.nodes.find((node) => node.id === source);
+						const targetNode = state.nodes.find((node) => node.id === target);
+
+						if (!sourceNode || !targetNode) return state;
+
+						// Prevent circular parent-child relationships.
+						let ancestorId: string | null = source;
+
+						while (ancestorId) {
+							if (ancestorId === target) return state;
+
+							const ancestor = state.nodes.find(
+								(node) => node.id === ancestorId,
+							);
+
+							ancestorId = ancestor?.data.parentId ?? null;
+						}
+
+						// If the target endpoint changes, release the previous child.
+						const updatedNodes = state.nodes.map((node) => {
+							if (node.id === oldEdge.target && oldEdge.target !== target) {
+								return {
+									...node,
+									data: {
+										...node.data,
+										parentId: null,
+									},
+								};
+							}
+
+							if (node.id === target) {
+								return {
+									...node,
+									data: {
+										...node.data,
+										parentId: source,
+									},
+								};
+							}
+
+							return node;
+						});
+
+						// Remove the old connection and any previous parent connection
+						// for the new target.
+						const updatedEdges = state.edges.filter(
+							(edge) => edge.id !== edgeId && edge.target !== target,
+						);
+
+						updatedEdges.push({
+							...oldEdge,
+							...connection,
+							id: `${source}-${target}`,
+							source,
+							target,
+						});
+
+						return {
+							nodes: updatedNodes,
+							edges: updatedEdges,
+						};
+					}),
 				replaceMap: (nodes, edges) =>
 					set({
 						nodes,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
 	ReactFlow,
@@ -18,6 +18,25 @@ import {
 	type EdgeChange,
 } from "@xyflow/react";
 
+import {
+	Grip,
+	Undo2,
+	Redo2,
+	Crosshair,
+	MousePointer2,
+	Maximize2,
+	Trash2,
+	MoreHorizontal,
+	ArrowUp,
+	ArrowDown,
+	GitBranch,
+	Grid3X3,
+	Magnet,
+	PanelLeft,
+	PanelRight,
+	CircleX,
+} from "lucide-react";
+
 import "@xyflow/react/dist/style.css";
 
 import MindMapNode from "./MindMapNode";
@@ -32,7 +51,15 @@ const nodeTypes = {
 // by multiple mounted MindMapFlow instances.
 const handledKeyboardEvents = new WeakSet<globalThis.KeyboardEvent>();
 
-function MindMapFlow() {
+type MindMapCanvasProps = {
+	onToggleSidebar?: () => void;
+	onToggleProperties?: () => void;
+};
+
+function MindMapFlow({
+	onToggleSidebar,
+	onToggleProperties,
+}: MindMapCanvasProps) {
 	const nodes = useMindMapStore((state) => state.nodes);
 	const edges = useMindMapStore((state) => state.edges);
 	const selectedNodeId = useMindMapStore((state) => state.selectedNodeId);
@@ -40,11 +67,24 @@ function MindMapFlow() {
 	const [gridVisible, setGridVisible] = useState(true);
 	const [snapEnabled, setSnapEnabled] = useState(true);
 
+	const [selectionMode, setSelectionMode] = useState(false);
+
+	const [toolbarOffset, setToolbarOffset] = useState({ x: 0, y: 0 });
+	const [toolbarMoreOpen, setToolbarMoreOpen] = useState(false);
+
+	const toolbarDragStart = useRef<{
+		pointerX: number;
+		pointerY: number;
+		offsetX: number;
+		offsetY: number;
+	} | null>(null);
+
 	const gridSize: [number, number] = [24, 24];
 
 	const setNodes = useMindMapStore((state) => state.setNodes);
 	const setEdges = useMindMapStore((state) => state.setEdges);
-	const selectNode = useMindMapStore((state) => state.selectNode);
+	//const selectNode = useMindMapStore((state) => state.selectNode);
+	const setActiveNodeId = useMindMapStore((state) => state.setActiveNodeId);
 
 	const { setCenter, getNode, fitView: fitViewToCanvas } = useReactFlow();
 
@@ -161,6 +201,15 @@ function MindMapFlow() {
 				return;
 			}
 
+			// W: Toggle selection mode
+			if (!modifier && !event.altKey && key === "w") {
+				event.preventDefault();
+				event.stopPropagation();
+
+				setSelectionMode((current) => !current);
+				return;
+			}
+
 			// CTRL + A / CMD + A: Select all nodes.
 			if (modifier && key === "a") {
 				event.preventDefault();
@@ -178,12 +227,37 @@ function MindMapFlow() {
 
 			// DELETE / BACKSPACE: Delete selected node.
 			if (event.key === "Delete" || event.key === "Backspace") {
-				if (!state.selectedNodeId) return;
+				const state = useMindMapStore.getState();
+
+				const selectedNodeIds = state.nodes
+					.filter((node) => node.selected)
+					.map((node) => node.id);
+
+				const selectedEdgeIds = state.edges
+					.filter((edge) => edge.selected)
+					.map((edge) => edge.id);
+
+				if (selectedNodeIds.length === 0 && selectedEdgeIds.length === 0) {
+					return;
+				}
 
 				event.preventDefault();
 				event.stopPropagation();
 
-				state.deleteNode(state.selectedNodeId);
+				if (selectedNodeIds.length > 0) {
+					state.deleteNodes(selectedNodeIds);
+				}
+
+				if (selectedEdgeIds.length > 0) {
+					const latestState = useMindMapStore.getState();
+
+					latestState.setEdges(
+						latestState.edges.filter(
+							(edge) => !selectedEdgeIds.includes(edge.id),
+						),
+					);
+				}
+
 				return;
 			}
 
@@ -218,7 +292,7 @@ function MindMapFlow() {
 		return () => {
 			window.removeEventListener("keydown", handleKeyboardShortcuts);
 		};
-	}, [fitViewToCanvas]);
+	}, [fitViewToCanvas, setSelectionMode]);
 
 	useEffect(() => {
 		if (!selectedNodeId) return;
@@ -274,6 +348,49 @@ function MindMapFlow() {
 			window.removeEventListener("mindmap:map-loaded", handleMapLoaded);
 		};
 	}, [getNode, setCenter]);
+
+	function handleToolbarPointerDown(event: React.PointerEvent<HTMLDivElement>) {
+		event.preventDefault();
+
+		toolbarDragStart.current = {
+			pointerX: event.clientX,
+			pointerY: event.clientY,
+			offsetX: toolbarOffset.x,
+			offsetY: toolbarOffset.y,
+		};
+
+		event.currentTarget.setPointerCapture(event.pointerId);
+	}
+
+	// Toolbar functions =============
+
+	function handleToolbarPointerMove(event: React.PointerEvent<HTMLDivElement>) {
+		const start = toolbarDragStart.current;
+		if (!start) return;
+
+		setToolbarOffset({
+			x: start.offsetX + event.clientX - start.pointerX,
+			y: start.offsetY + event.clientY - start.pointerY,
+		});
+	}
+
+	function handleToolbarPointerUp() {
+		toolbarDragStart.current = null;
+	}
+	// =============
+
+	// for arrow connections
+	const handleConnect = useCallback((connection: Connection) => {
+		const state = useMindMapStore.getState();
+
+		const newEdge: Edge = {
+			...connection,
+			id: `connection-${crypto.randomUUID()}`,
+			type: "default",
+		};
+
+		state.setEdges([...state.edges, newEdge]);
+	}, []);
 
 	const handleNodesChange = (changes: NodeChange<Node<MindMapNodeData>>[]) => {
 		const updatedNodes = applyNodeChanges<Node<MindMapNodeData>>(
@@ -334,69 +451,282 @@ function MindMapFlow() {
 	}
 
 	function handleReconnect(oldEdge: Edge, newConnection: Connection) {
-		if (!newConnection.source || !newConnection.target) return;
-
-		if (newConnection.target !== oldEdge.target) return;
-
-		if (newConnection.source === oldEdge.source) return;
-
-		useMindMapStore
-			.getState()
-			.reparentNode(oldEdge.target, newConnection.source);
+		useMindMapStore.getState().reconnectEdge(oldEdge.id, newConnection);
 	}
 
 	return (
 		<div className="relative h-full w-full touch-none">
-			<div className="absolute left-4 top-4 z-10 flex gap-2">
+			<div className="mindmap-desktop-canvas-tools absolute left-4 top-4 z-10 flex gap-2">
 				<button
 					type="button"
 					onClick={() => setGridVisible((current) => !current)}
-					className={`rounded-lg border px-3 py-2 text-xs font-medium shadow-sm ${
-						gridVisible
-							? "border-[#9B7EBD] bg-[#F1EAFB] text-[#6F527F]"
-							: "border-gray-300 bg-white text-gray-500"
+					className={`mindmap-sidebar-toggle rounded-lg border px-3 py-2 text-xs font-medium shadow-sm mindmap-canvas-tool ${
+						gridVisible ? "mindmap-canvas-tool-active" : ""
 					}`}
 				>
 					Grid: {gridVisible ? "On" : "Off"}
 					<span className="ml-2 opacity-60">G</span>
 				</button>
-
 				<button
 					type="button"
 					onClick={() => setSnapEnabled((current) => !current)}
-					className={`rounded-lg border px-3 py-2 text-xs font-medium shadow-sm ${
-						snapEnabled
-							? "border-[#9B7EBD] bg-[#F1EAFB] text-[#6F527F]"
-							: "border-gray-300 bg-white text-gray-500"
+					className={`mindmap-sidebar-toggle rounded-lg border px-3 py-2 text-xs font-medium shadow-sm mindmap-canvas-tool ${
+						snapEnabled ? "mindmap-canvas-tool-active" : ""
 					}`}
 				>
 					Snap: {snapEnabled ? "On" : "Off"}
 					<span className="ml-2 opacity-60">Shift+G</span>
 				</button>
 			</div>
+			{/* Compact tablet/mobile toolbar */}
+			<div
+				className="mindmap-floating-toolbar"
+				style={{
+					transform: `translate(calc(-50% + ${toolbarOffset.x}px), ${toolbarOffset.y}px)`,
+				}}
+			>
+				{/* Primary toolbar */}
+				<div className="mindmap-toolbar-primary">
+					<div
+						className="mindmap-toolbar-drag"
+						onPointerDown={handleToolbarPointerDown}
+						onPointerMove={handleToolbarPointerMove}
+						onPointerUp={handleToolbarPointerUp}
+						onPointerCancel={handleToolbarPointerUp}
+						title="Drag toolbar"
+						aria-label="Drag toolbar"
+					>
+						<Grip size={19} />
+					</div>
+
+					<button
+						type="button"
+						onClick={() => useMindMapStore.temporal.getState().undo()}
+						title="Undo"
+						aria-label="Undo"
+					>
+						<Undo2 size={19} />
+					</button>
+
+					<button
+						type="button"
+						onClick={() => useMindMapStore.temporal.getState().redo()}
+						title="Redo"
+						aria-label="Redo"
+					>
+						<Redo2 size={19} />
+					</button>
+
+					<span className="mindmap-toolbar-divider" />
+
+					<button
+						type="button"
+						onClick={() => {
+							const firstRootNode = useMindMapStore
+								.getState()
+								.nodes.find((node) => node.data?.parentId == null);
+
+							if (!firstRootNode) return;
+
+							requestAnimationFrame(() => {
+								fitViewToCanvas({
+									nodes: [{ id: firstRootNode.id }],
+									padding: 0.25,
+									duration: 500,
+									maxZoom: 1.2,
+								});
+							});
+						}}
+						title="Focus root node (1)"
+						aria-label="Focus root node"
+					>
+						<Crosshair size={19} />
+					</button>
+
+					<button
+						type="button"
+						onClick={() => setSelectionMode((current) => !current)}
+						className={selectionMode ? "active" : ""}
+						aria-pressed={selectionMode}
+						title="Selection mode (W)"
+						aria-label="Toggle selection mode"
+					>
+						<MousePointer2 size={19} />
+					</button>
+
+					<button
+						type="button"
+						onClick={() =>
+							fitViewToCanvas({
+								padding: 0.2,
+								duration: 400,
+							})
+						}
+						title="Fit entire mind map"
+						aria-label="Fit mind map"
+					>
+						<Maximize2 size={19} />
+					</button>
+
+					<button
+						type="button"
+						className="mindmap-toolbar-delete"
+						onClick={() => {
+							const state = useMindMapStore.getState();
+
+							const selectedNodeIds = state.nodes
+								.filter((node) => node.selected)
+								.map((node) => node.id);
+
+							const selectedEdgeIds = state.edges
+								.filter((edge) => edge.selected)
+								.map((edge) => edge.id);
+
+							if (selectedNodeIds.length > 0) {
+								state.deleteNodes(selectedNodeIds);
+							}
+
+							if (selectedEdgeIds.length > 0) {
+								const latestState = useMindMapStore.getState();
+
+								latestState.setEdges(
+									latestState.edges.filter(
+										(edge) => !selectedEdgeIds.includes(edge.id),
+									),
+								);
+							}
+						}}
+						disabled={
+							!nodes.some((node) => node.selected) &&
+							!edges.some((edge) => edge.selected)
+						}
+						title="Delete selected items"
+						aria-label="Delete selected items"
+					>
+						<Trash2 size={19} />
+					</button>
+
+					<button
+						type="button"
+						className={`mindmap-toolbar-more ${toolbarMoreOpen ? "active" : ""}`}
+						onClick={() => setToolbarMoreOpen((value) => !value)}
+						aria-expanded={toolbarMoreOpen}
+						title={toolbarMoreOpen ? "Close more options" : "More options"}
+						aria-label="More toolbar options"
+					>
+						{toolbarMoreOpen ? (
+							<CircleX size={19} />
+						) : (
+							<MoreHorizontal size={19} />
+						)}
+					</button>
+				</div>
+
+				{/* Expandable secondary panel */}
+				{toolbarMoreOpen && (
+					<div className="mindmap-toolbar-secondary">
+						<button
+							type="button"
+							onClick={() => {
+								if (!selectedNodeId) return;
+								useMindMapStore.getState().addParent(selectedNodeId);
+							}}
+							disabled={!selectedNodeId}
+						>
+							<ArrowUp size={16} />
+							Parent
+						</button>
+
+						<button
+							type="button"
+							onClick={() => {
+								if (!selectedNodeId) return;
+								useMindMapStore.getState().addChild(selectedNodeId);
+							}}
+							disabled={!selectedNodeId}
+						>
+							<ArrowDown size={16} />
+							Child
+						</button>
+
+						<button
+							type="button"
+							onClick={() => {
+								if (!selectedNodeId) return;
+								useMindMapStore.getState().addSibling(selectedNodeId);
+							}}
+							disabled={!selectedNodeId}
+						>
+							<GitBranch size={16} />
+							Sibling
+						</button>
+
+						<button
+							type="button"
+							className={gridVisible ? "active" : ""}
+							aria-pressed={gridVisible}
+							onClick={() => setGridVisible((value) => !value)}
+						>
+							<Grid3X3 size={16} />
+							Grid {gridVisible ? "On" : "Off"}
+						</button>
+
+						<button
+							type="button"
+							className={snapEnabled ? "active" : ""}
+							aria-pressed={snapEnabled}
+							onClick={() => setSnapEnabled((value) => !value)}
+						>
+							<Magnet size={16} />
+							Snap {snapEnabled ? "On" : "Off"}
+						</button>
+
+						<button type="button" onClick={onToggleSidebar}>
+							<PanelLeft size={16} />
+							Sidebar
+						</button>
+
+						<button type="button" onClick={onToggleProperties}>
+							<PanelRight size={16} />
+							Properties
+						</button>
+					</div>
+				)}
+			</div>
 			<ReactFlow<Node<MindMapNodeData>>
 				nodes={nodes}
 				edges={edges}
 				nodeTypes={nodeTypes}
 				deleteKeyCode={null}
+				onReconnect={handleReconnect} // reconnection of  arrrows
 				edgesReconnectable={true}
-				onReconnect={handleReconnect}
+				onConnect={handleConnect} // add connection
 				onNodesChange={handleNodesChange}
 				onEdgesChange={handleEdgesChange}
 				onNodeDragStart={handleNodeDragStart}
 				snapToGrid={snapEnabled}
 				snapGrid={gridSize}
+				// for tablet mode ===
+				panOnDrag={!selectionMode}
+				selectionOnDrag={selectionMode}
+				panOnScroll={false}
+				zoomOnPinch={true}
+				zoomOnDoubleClick={false}
+				nodesDraggable={true}
+				nodesConnectable={true}
+				// ===
 				onNodeDragStop={handleNodeDragStop}
-				onNodeClick={(_, node) => {
-					selectNode(node.id);
+				multiSelectionKeyCode="Control"
+				onSelectionChange={({ nodes: selectedNodes }) => {
+					setActiveNodeId(selectedNodes[selectedNodes.length - 1]?.id ?? null);
 				}}
 				onPaneClick={() => {
-					selectNode(null);
+					setActiveNodeId(null);
 				}}
 				fitView={false}
 			>
 				{gridVisible && (
-					<Background gap={gridSize[0]} size={1} color="#eadde4" />
+					<Background gap={gridSize[0]} size={1} color="#be45ff" />
 				)}
 				<Controls />
 				<MiniMap nodeColor="#c77d9b" />
@@ -405,10 +735,10 @@ function MindMapFlow() {
 	);
 }
 
-export default function MindMapCanvas() {
+export default function MindMapCanvas(props: MindMapCanvasProps) {
 	return (
 		<ReactFlowProvider>
-			<MindMapFlow />
+			<MindMapFlow {...props} />
 		</ReactFlowProvider>
 	);
 }
