@@ -28,8 +28,26 @@ export default function EditorPage() {
 
 	const selectedNodeId = useMindMapStore((state) => state.selectedNodeId);
 
+	const [activeMapTitle, setActiveMapTitle] = useState("Loading map...");
+
 	const addChild = useMindMapStore((state) => state.addChild);
 	const addParent = useMindMapStore((state) => state.addParent);
+
+	useEffect(() => {
+		function handleMapLoaded(event: Event) {
+			const customEvent = event as CustomEvent<{
+				title?: string;
+			}>;
+
+			setActiveMapTitle(customEvent.detail?.title || "Untitled Mind Map");
+		}
+
+		window.addEventListener("mindmap:map-loaded", handleMapLoaded);
+
+		return () => {
+			window.removeEventListener("mindmap:map-loaded", handleMapLoaded);
+		};
+	}, []);
 
 	useEffect(() => {
 		function handleSidebarShortcuts(event: KeyboardEvent) {
@@ -152,9 +170,18 @@ export default function EditorPage() {
 						</div>
 
 						<div className="min-h-0 flex-1 overflow-y-auto p-3">
-							<p className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-[#887B91]">
-								Map Outline
-							</p>
+							<div className="mb-4 px-2">
+								<p
+									className="truncate text-sm font-semibold text-[#6F527F]"
+									title={activeMapTitle}
+								>
+									{activeMapTitle}
+								</p>
+
+								<p className="mt-2 text-xs font-semibold uppercase tracking-wide text-[#887B91]">
+									Map Outline
+								</p>
+							</div>
 
 							<MapTree />
 						</div>
@@ -246,14 +273,17 @@ export default function EditorPage() {
 
 					<aside className="absolute inset-y-0 left-0 flex w-[88%] max-w-sm flex-col bg-white shadow-xl">
 						<div className="flex items-center justify-between items-center border-b border-[#E7DDF0] px-5 py-4">
-							<div className="flex flex-col items-left">
-								<h2
-									className="font-semibold text-[#6F527F]"
-									onClick={() => router.push("/dashboard")}
+							<div className="min-w-0 flex-1">
+								<p
+									className="truncate text-sm font-semibold text-[#6F527F]"
+									title={activeMapTitle}
 								>
+									{activeMapTitle}
+								</p>
+
+								<h2 className="mt-1 text-xs font-semibold uppercase tracking-wide text-[#887B91]">
 									Map Outline
 								</h2>
-								<p className="mt-1 text-xs text-[#887B91]">Select a node</p>
 							</div>
 							<div className="flex gap-1">
 								<ThemeToggle />

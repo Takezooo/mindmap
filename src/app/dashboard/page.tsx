@@ -12,6 +12,7 @@ import {
 	ArrowLeft,
 	ArrowRight,
 	BookOpen,
+	Check,
 	ChevronRight,
 	Eye,
 	EyeOff,
@@ -110,6 +111,21 @@ export default function DashboardPage() {
 	const [errorMessage, setErrorMessage] = useState("");
 	const [notice, setNotice] = useState("");
 
+	const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+
+	const [editingItem, setEditingItem] = useState<{
+		type: "map" | "folder";
+		id: string;
+	} | null>(null);
+
+	const [pendingDelete, setPendingDelete] = useState<{
+		type: "map" | "folder";
+		id: string;
+		name: string;
+	} | null>(null);
+
+	const [editingName, setEditingName] = useState("");
+
 	/* LOAD DATABASE ========================================= */
 
 	const loadDashboard = useCallback(async () => {
@@ -173,6 +189,26 @@ export default function DashboardPage() {
 	useEffect(() => {
 		void loadDashboard();
 	}, [loadDashboard]);
+
+	useEffect(() => {
+		function handleOutsideClick(event: MouseEvent | TouchEvent) {
+			const target = event.target;
+
+			if (!(target instanceof Element)) return;
+
+			if (!target.closest("[data-dashboard-menu]")) {
+				setOpenMenuId(null);
+			}
+		}
+
+		document.addEventListener("mousedown", handleOutsideClick);
+		document.addEventListener("touchstart", handleOutsideClick);
+
+		return () => {
+			document.removeEventListener("mousedown", handleOutsideClick);
+			document.removeEventListener("touchstart", handleOutsideClick);
+		};
+	}, []);
 
 	/* HIDDEN FOLDER CALCULATION
     == A hidden parent also hides its descendants from the normal folder navigation.  
@@ -414,37 +450,89 @@ export default function DashboardPage() {
 		router.push("/editor");
 	}
 
-	/* RENAME MAP ========================================= */
+	/* RENAME ========================================= */
 
-	async function renameMap(map: MapRecord) {
-		const nextTitle = window
-			.prompt("Enter the new map title:", map.title)
-			?.trim();
+	function startRename(
+		type: "map" | "folder",
+		id: string,
+		currentName: string,
+	) {
+		setOpenMenuId(null);
+		setEditingItem({ type, id });
+		setEditingName(currentName);
+	}
 
-		if (!nextTitle || nextTitle === map.title || !userId) {
+	function cancelRename() {
+		setEditingItem(null);
+		setEditingName("");
+	}
+
+	async function saveRename(event: React.FormEvent<HTMLFormElement>) {
+		event.preventDefault();
+
+		if (!userId || !editingItem) return;
+
+		const nextName = editingName.trim();
+
+		if (!nextName) return;
+
+		const { type, id } = editingItem;
+
+		const currentName =
+			type === "map"
+				? maps.find((item) => item.id === id)?.title
+				: folders.find((item) => item.id === id)?.name;
+
+		if (!currentName || nextName === currentName) {
+			cancelRename();
 			return;
 		}
+
+		setWorking(true);
+		setErrorMessage("");
 
 		try {
 			const supabase = createClient();
 
-			const { error } = await supabase
-				.from("mind_maps")
-				.update({ title: nextTitle })
-				.eq("id", map.id)
-				.eq("user_id", userId);
+			if (type === "map") {
+				const { error } = await supabase
+					.from("mind_maps")
+					.update({ title: nextName })
+					.eq("id", id)
+					.eq("user_id", userId);
 
-			if (error) throw error;
+				if (error) throw error;
 
-			setMaps((current) =>
-				current.map((item) =>
-					item.id === map.id ? { ...item, title: nextTitle } : item,
-				),
-			);
+				setMaps((current) =>
+					current.map((item) =>
+						item.id === id ? { ...item, title: nextName } : item,
+					),
+				);
 
-			setNotice("Mind map renamed.");
+				setNotice("Mind map renamed.");
+			} else {
+				const { error } = await supabase
+					.from("folders")
+					.update({ name: nextName })
+					.eq("id", id)
+					.eq("user_id", userId);
+
+				if (error) throw error;
+
+				setFolders((current) =>
+					current.map((item) =>
+						item.id === id ? { ...item, name: nextName } : item,
+					),
+				);
+
+				setNotice("Subject renamed.");
+			}
+
+			cancelRename();
 		} catch (error) {
 			setErrorMessage(getErrorMessage(error));
+		} finally {
+			setWorking(false);
 		}
 	}
 
@@ -521,13 +609,10 @@ export default function DashboardPage() {
 	/* DELETE MAP ========================================= */
 
 	async function deleteMap(map: MapRecord) {
-		if (!userId) return;
+		if (!userId || working) return;
 
-		const confirmed = window.confirm(
-			`Permanently delete "${map.title}"? This cannot be undone.`,
-		);
-
-		if (!confirmed) return;
+		setWorking(true);
+		setErrorMessage("");
 
 		try {
 			const supabase = createClient();
@@ -548,45 +633,16 @@ export default function DashboardPage() {
 				localStorage.removeItem(activeKey);
 			}
 
-			setNotice("Mind map deleted.");
+			setNotice(`"${map.title}" was permanently deleted.`);
+			setPendingDelete(null);
 		} catch (error) {
 			setErrorMessage(getErrorMessage(error));
+		} finally {
+			setWorking(false);
 		}
 	}
 
 	/* FOLDER ACTIONS ========================================= */
-
-	async function renameFolder(folder: FolderRecord) {
-		const nextName = window
-			.prompt("Enter the new subject name:", folder.name)
-			?.trim();
-
-		if (!nextName || nextName === folder.name || !userId) {
-			return;
-		}
-
-		try {
-			const supabase = createClient();
-
-			const { error } = await supabase
-				.from("folders")
-				.update({ name: nextName })
-				.eq("id", folder.id)
-				.eq("user_id", userId);
-
-			if (error) throw error;
-
-			setFolders((current) =>
-				current.map((item) =>
-					item.id === folder.id ? { ...item, name: nextName } : item,
-				),
-			);
-
-			setNotice("Subject renamed.");
-		} catch (error) {
-			setErrorMessage(getErrorMessage(error));
-		}
-	}
 
 	async function toggleFolderHidden(folder: FolderRecord) {
 		if (!userId) return;
@@ -618,6 +674,77 @@ export default function DashboardPage() {
 			setNotice(folder.is_hidden ? "Subject restored." : "Subject hidden.");
 		} catch (error) {
 			setErrorMessage(getErrorMessage(error));
+		}
+	}
+
+	async function deleteFolder(folder: FolderRecord) {
+		if (!userId || working) return;
+
+		setWorking(true);
+		setErrorMessage("");
+
+		try {
+			const supabase = createClient();
+
+			const parentId = folder.parent_id;
+
+			// Preserve maps inside the deleted subject.
+			const { error: mapsError } = await supabase
+				.from("mind_maps")
+				.update({ folder_id: parentId })
+				.eq("folder_id", folder.id)
+				.eq("user_id", userId);
+
+			if (mapsError) throw mapsError;
+
+			// Preserve child subjects by moving them to the deleted subject's parent.
+			const { error: foldersError } = await supabase
+				.from("folders")
+				.update({ parent_id: parentId })
+				.eq("parent_id", folder.id)
+				.eq("user_id", userId);
+
+			if (foldersError) throw foldersError;
+
+			// Delete only the selected subject.
+			const { error: deleteError } = await supabase
+				.from("folders")
+				.delete()
+				.eq("id", folder.id)
+				.eq("user_id", userId);
+
+			if (deleteError) throw deleteError;
+
+			setMaps((current) =>
+				current.map((map) =>
+					map.folder_id === folder.id ? { ...map, folder_id: parentId } : map,
+				),
+			);
+
+			setFolders((current) =>
+				current
+					.filter((item) => item.id !== folder.id)
+					.map((item) =>
+						item.parent_id === folder.id
+							? { ...item, parent_id: parentId }
+							: item,
+					),
+			);
+
+			if (selectedFolderId === folder.id) {
+				setSelectedFolderId(parentId);
+			}
+
+			setNotice(
+				`"${folder.name}" was deleted. Its maps and child subjects were preserved.`,
+			);
+
+			setPendingDelete(null);
+		} catch (error) {
+			console.error("Subject deletion failed:", error);
+			setErrorMessage(getErrorMessage(error));
+		} finally {
+			setWorking(false);
 		}
 	}
 
@@ -695,9 +822,45 @@ export default function DashboardPage() {
 					</div>
 
 					<div className="min-w-0 flex-1">
-						<h3 className="break-words font-semibold text-[#6F527F]">
-							{map.title}
-						</h3>
+						{editingItem?.type === "map" && editingItem.id === map.id ? (
+							<form
+								onSubmit={(event) => void saveRename(event)}
+								className="flex min-w-0 items-center gap-2"
+							>
+								<input
+									autoFocus
+									value={editingName}
+									onChange={(event) => setEditingName(event.target.value)}
+									onKeyDown={(event) => {
+										if (event.key === "Escape") cancelRename();
+									}}
+									maxLength={150}
+									className="min-w-0 w-full rounded-lg border border-[#CDB9DF] bg-[#FAF7FF] px-2 py-1 text-sm font-semibold text-[#6F527F] outline-none focus:border-[#9B7EBD]"
+								/>
+
+								<button
+									type="submit"
+									disabled={working || !editingName.trim()}
+									aria-label="Save map name"
+									className="rounded-md p-1.5 text-[#795F9B] hover:bg-[#F1EAFB] disabled:opacity-50"
+								>
+									<Check size={17} />
+								</button>
+
+								<button
+									type="button"
+									onClick={cancelRename}
+									aria-label="Cancel renaming"
+									className="rounded-md p-1.5 text-[#887B91] hover:bg-[#F1EAFB]"
+								>
+									<X size={17} />
+								</button>
+							</form>
+						) : (
+							<h3 className="break-words font-semibold text-[#6F527F]">
+								{map.title}
+							</h3>
+						)}
 
 						<p className="mt-1 truncate text-xs text-[#887B91]">
 							{getFolderName(map.folder_id)}
@@ -725,68 +888,92 @@ export default function DashboardPage() {
 						<ArrowRight size={15} />
 					</button>
 
-					<details className="group relative">
-						<summary className="flex min-h-10 cursor-pointer list-none items-center gap-2 rounded-xl border border-[#E7DDF0] px-3 py-2 text-sm font-medium text-[#6F527F] hover:bg-[#F8F4FC]">
+					<div className="relative" data-dashboard-menu>
+						<button
+							type="button"
+							onClick={() =>
+								setOpenMenuId((current) =>
+									current === `map-${map.id}` ? null : `map-${map.id}`,
+								)
+							}
+							aria-label={`Manage ${map.title}`}
+							aria-expanded={openMenuId === `map-${map.id}`}
+							className="flex min-h-10 cursor-pointer list-none items-center gap-2 rounded-xl border border-[#E7DDF0] px-3 py-2 text-sm font-medium text-[#6F527F] hover:bg-[#F8F4FC]"
+						>
 							<MoreHorizontal size={17} />
 							More
-						</summary>
+						</button>
 
-						<div className="absolute right-0 z-20 mt-2 w-60 rounded-xl border border-[#E7DDF0] bg-white p-2 shadow-xl">
-							<button
-								type="button"
-								onClick={() => void renameMap(map)}
-								className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-[#6F527F] hover:bg-[#F8F4FC]"
-							>
-								<Pencil size={16} />
-								Rename map
-							</button>
-
-							<div className="px-3 py-2">
-								<label
-									htmlFor={`move-${map.id}`}
-									className="mb-2 block text-xs font-medium text-[#887B91]"
+						{openMenuId === `map-${map.id}` && (
+							<div className="absolute right-0 z-20 mt-2 w-60 rounded-xl border border-[#E7DDF0] bg-white p-2 shadow-xl">
+								<button
+									type="button"
+									onClick={() => startRename("map", map.id, map.title)}
+									className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-[#6F527F] hover:bg-[#F8F4FC]"
 								>
-									Move to subject
-								</label>
+									<Pencil size={16} />
+									Rename map
+								</button>
 
-								<select
-									id={`move-${map.id}`}
-									value={map.folder_id ?? ""}
-									onChange={(event) => void moveMap(map, event.target.value)}
-									className="w-full rounded-lg border border-[#E7DDF0] bg-[#FAF7FF] px-2 py-2 text-sm text-[#6F527F]"
+								<div className="px-3 py-2">
+									<label
+										htmlFor={`move-${map.id}`}
+										className="mb-2 block text-xs font-medium text-[#887B91]"
+									>
+										Move to subject
+									</label>
+
+									<select
+										id={`move-${map.id}`}
+										value={map.folder_id ?? ""}
+										onChange={(event) => {
+											setOpenMenuId(null);
+											void moveMap(map, event.target.value);
+										}}
+										className="w-full rounded-lg border border-[#E7DDF0] bg-[#FAF7FF] px-2 py-2 text-sm text-[#6F527F]"
+									>
+										<option value="">Uncategorized</option>
+
+										{activeFolders.map((folder) => (
+											<option key={folder.id} value={folder.id}>
+												{getFolderName(folder.id)}
+											</option>
+										))}
+									</select>
+								</div>
+
+								<button
+									type="button"
+									onClick={() => {
+										setOpenMenuId(null);
+										void toggleMapHidden(map);
+									}}
+									className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-[#6F527F] hover:bg-[#F8F4FC]"
 								>
-									<option value="">Uncategorized</option>
+									{isHidden ? <Eye size={16} /> : <EyeOff size={16} />}
+									{isHidden ? "Restore map" : "Hide map"}
+								</button>
 
-									{activeFolders.map((folder) => (
-										<option key={folder.id} value={folder.id}>
-											{getFolderName(folder.id)}
-										</option>
-									))}
-								</select>
+								<div className="my-1 border-t border-[#E7DDF0]" />
+
+								<button
+									type="button"
+									onClick={() => {
+										setOpenMenuId(null);
+										setPendingDelete({
+											type: "map",
+											id: map.id,
+											name: map.title,
+										});
+									}}
+									className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-[#A95F7D] hover:bg-[#FCEFF4]"
+								>
+									<Trash2 size={16} />
+									Delete
+								</button>
 							</div>
-
-							<button
-								type="button"
-								onClick={() => void toggleMapHidden(map)}
-								className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-[#6F527F] hover:bg-[#F8F4FC]"
-							>
-								{isHidden ? <Eye size={16} /> : <EyeOff size={16} />}
-
-								{isHidden ? "Restore map" : "Hide map"}
-							</button>
-
-							<div className="my-1 border-t border-[#E7DDF0]" />
-
-							<button
-								type="button"
-								onClick={() => void deleteMap(map)}
-								className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-[#A95F7D] hover:bg-[#FCEFF4]"
-							>
-								<Trash2 size={16} />
-								Delete permanently
-							</button>
-						</div>
-					</details>
+						)}
+					</div>
 				</div>
 			</article>
 		);
@@ -810,43 +997,108 @@ export default function DashboardPage() {
 					</div>
 
 					<div className="min-w-0 flex-1">
-						<h3 className="break-words font-semibold text-[#6F527F]">
-							{folder.name}
-						</h3>
+						{editingItem?.type === "folder" && editingItem.id === folder.id ? (
+							<form
+								onSubmit={(event) => void saveRename(event)}
+								className="flex min-w-0 items-center gap-2"
+							>
+								<input
+									autoFocus
+									value={editingName}
+									onChange={(event) => setEditingName(event.target.value)}
+									onKeyDown={(event) => {
+										if (event.key === "Escape") cancelRename();
+									}}
+									maxLength={100}
+									className="min-w-0 w-full rounded-lg border border-[#CDB9DF] bg-[#FAF7FF] px-2 py-1 text-sm font-semibold text-[#6F527F] outline-none focus:border-[#9B7EBD]"
+								/>
+
+								<button
+									type="submit"
+									disabled={working || !editingName.trim()}
+									aria-label="Save subject name"
+									className="rounded-md p-1.5 text-[#795F9B] hover:bg-[#F1EAFB] disabled:opacity-50"
+								>
+									<Check size={17} />
+								</button>
+
+								<button
+									type="button"
+									onClick={cancelRename}
+									aria-label="Cancel renaming"
+									className="rounded-md p-1.5 text-[#887B91] hover:bg-[#F1EAFB]"
+								>
+									<X size={17} />
+								</button>
+							</form>
+						) : (
+							<h3 className="break-words font-semibold text-[#6F527F]">
+								{folder.name}
+							</h3>
+						)}
 
 						<p className="mt-1 text-xs text-[#887B91]">
 							{childCount} folders · {mapCount} maps
 						</p>
 					</div>
 
-					<details className="group relative">
-						<summary
+					<div className="relative" data-dashboard-menu>
+						<button
+							type="button"
+							onClick={() =>
+								setOpenMenuId((current) =>
+									current === `folder-${folder.id}`
+										? null
+										: `folder-${folder.id}`,
+								)
+							}
 							aria-label={`Manage ${folder.name}`}
-							className="flex h-10 w-10 cursor-pointer list-none items-center justify-center rounded-lg text-[#887B91] hover:bg-[#F1EAFB]"
+							aria-expanded={openMenuId === `folder-${folder.id}`}
+							className="flex h-10 w-10 items-center justify-center rounded-lg text-[#887B91] hover:bg-[#F1EAFB]"
 						>
 							<MoreHorizontal size={19} />
-						</summary>
+						</button>
 
-						<div className="absolute right-0 z-20 mt-1 w-44 rounded-xl border border-[#E7DDF0] bg-white p-2 shadow-xl">
-							<button
-								type="button"
-								onClick={() => void renameFolder(folder)}
-								className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-[#F8F4FC]"
-							>
-								<Pencil size={15} />
-								Rename
-							</button>
+						{openMenuId === `folder-${folder.id}` && (
+							<div className="absolute right-0 z-20 mt-1 w-44 rounded-xl border border-[#E7DDF0] bg-white p-2 shadow-xl">
+								<button
+									type="button"
+									onClick={() => startRename("folder", folder.id, folder.name)}
+									className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-[#F8F4FC]"
+								>
+									<Pencil size={15} />
+									Rename
+								</button>
 
-							<button
-								type="button"
-								onClick={() => void toggleFolderHidden(folder)}
-								className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-[#F8F4FC]"
-							>
-								<EyeOff size={15} />
-								Hide subject
-							</button>
-						</div>
-					</details>
+								<button
+									type="button"
+									onClick={() => {
+										setOpenMenuId(null);
+										void toggleFolderHidden(folder);
+									}}
+									className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-[#F8F4FC]"
+								>
+									<EyeOff size={15} />
+									Hide subject
+								</button>
+								<button
+									type="button"
+									onClick={() => {
+										setOpenMenuId(null);
+										setPendingDelete({
+											type: "folder",
+											id: folder.id,
+											name: folder.name,
+										});
+									}}
+									className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-[#A95F7D] hover:bg-[#FCEFF4]"
+								>
+									<Trash2 size={15} />
+									Delete
+								</button>
+							</div>
+						)}
+					</div>
 				</div>
 
 				<button
@@ -858,6 +1110,94 @@ export default function DashboardPage() {
 					<ChevronRight size={16} />
 				</button>
 			</article>
+		);
+	}
+
+	/* DELETE CONFIRMATION MODAL */
+
+	{
+		pendingDelete && (
+			<div className="fixed inset-0 z-[70] flex items-center justify-center bg-[#3F3545]/35 p-4">
+				<button
+					type="button"
+					className="absolute inset-0 cursor-default"
+					aria-label="Close confirmation"
+					onClick={() => {
+						if (!working) setPendingDelete(null);
+					}}
+				/>
+
+				<section
+					role="alertdialog"
+					aria-modal="true"
+					aria-labelledby="delete-dialog-title"
+					className="relative z-10 w-full max-w-md rounded-2xl border border-[#E7DDF0] bg-white p-6 shadow-2xl sm:p-7"
+				>
+					<div className="mb-5 flex items-start gap-4">
+						<div className="rounded-xl bg-[#FCEFF4] p-3 text-[#A95F7D]">
+							<Trash2 size={23} />
+						</div>
+
+						<div className="min-w-0 flex-1">
+							<h2
+								id="delete-dialog-title"
+								className="text-lg font-bold text-[#6F527F]"
+							>
+								Delete {pendingDelete.type === "map" ? "mind map" : "subject"}?
+							</h2>
+
+							<p className="mt-2 break-words text-sm text-[#887B91]">
+								Are you sure you want to permanently delete{" "}
+								<strong className="text-[#6F527F]">{pendingDelete.name}</strong>
+								?
+							</p>
+
+							{pendingDelete.type === "folder" && (
+								<p className="mt-3 rounded-xl bg-[#F1EAFB] p-3 text-xs leading-relaxed text-[#6F527F]">
+									Your mind maps and child subjects will be preserved and moved
+									to the parent subject. Only this subject will be deleted.
+								</p>
+							)}
+
+							<p className="mt-3 text-xs text-[#A95F7D]">
+								This action cannot be undone.
+							</p>
+						</div>
+					</div>
+
+					<div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+						<button
+							type="button"
+							disabled={working}
+							onClick={() => setPendingDelete(null)}
+							className="rounded-xl border border-[#E7DDF0] px-5 py-3 text-sm font-medium text-[#887B91] hover:bg-[#FAF7FF] disabled:opacity-50"
+						>
+							Cancel
+						</button>
+
+						<button
+							type="button"
+							disabled={working}
+							onClick={() => {
+								if (pendingDelete.type === "map") {
+									const map = maps.find((item) => item.id === pendingDelete.id);
+
+									if (map) void deleteMap(map);
+								} else {
+									const folder = folders.find(
+										(item) => item.id === pendingDelete.id,
+									);
+
+									if (folder) void deleteFolder(folder);
+								}
+							}}
+							className="rounded-xl bg-[#A95F7D] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#914A68] disabled:opacity-50"
+						>
+							{working ? "Deleting..." : "Delete"}
+						</button>
+					</div>
+				</section>
+			</div>
 		);
 	}
 
@@ -1551,6 +1891,96 @@ export default function DashboardPage() {
 					</div>
 				</div>
 			</div>
+			{/* DELETE CONFIRMATION MODAL */}
+			{pendingDelete && (
+				<div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#3F3545]/45 p-4">
+					<button
+						type="button"
+						className="absolute inset-0 cursor-default"
+						aria-label="Close confirmation"
+						onClick={() => {
+							if (!working) setPendingDelete(null);
+						}}
+					/>
+
+					<section
+						role="alertdialog"
+						aria-modal="true"
+						aria-labelledby="delete-dialog-title"
+						className="relative z-10 w-full max-w-md rounded-2xl border border-[#E7DDF0] bg-white p-6 shadow-2xl sm:p-7"
+					>
+						<div className="mb-5 flex items-start gap-4">
+							<div className="rounded-xl bg-[#FCEFF4] p-3 text-[#A95F7D]">
+								<Trash2 size={23} />
+							</div>
+
+							<div className="min-w-0 flex-1">
+								<h2
+									id="delete-dialog-title"
+									className="text-lg font-bold text-[#6F527F]"
+								>
+									Delete {pendingDelete.type === "map" ? "mind map" : "subject"}
+									?
+								</h2>
+
+								<p className="mt-2 break-words text-sm text-[#887B91]">
+									Are you sure you want to permanently delete{" "}
+									<strong className="text-[#6F527F]">
+										{pendingDelete.name}
+									</strong>
+									?
+								</p>
+
+								{pendingDelete.type === "folder" && (
+									<p className="mt-3 rounded-xl bg-[#F1EAFB] p-3 text-xs leading-relaxed text-[#6F527F]">
+										Your mind maps and child subjects will be preserved and
+										moved to the parent subject. Only this subject will be
+										deleted.
+									</p>
+								)}
+
+								<p className="mt-3 text-xs text-[#A95F7D]">
+									This action cannot be undone.
+								</p>
+							</div>
+						</div>
+
+						<div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+							<button
+								type="button"
+								disabled={working}
+								onClick={() => setPendingDelete(null)}
+								className="rounded-xl border border-[#E7DDF0] px-5 py-3 text-sm font-medium text-[#887B91] hover:bg-[#FAF7FF] disabled:opacity-50"
+							>
+								Cancel
+							</button>
+
+							<button
+								type="button"
+								disabled={working}
+								onClick={() => {
+									if (pendingDelete.type === "map") {
+										const map = maps.find(
+											(item) => item.id === pendingDelete.id,
+										);
+
+										if (map) void deleteMap(map);
+									} else {
+										const folder = folders.find(
+											(item) => item.id === pendingDelete.id,
+										);
+
+										if (folder) void deleteFolder(folder);
+									}
+								}}
+								className="rounded-xl bg-[#A95F7D] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#914A68] disabled:opacity-50"
+							>
+								{working ? "Deleting..." : "Delete permanently"}
+							</button>
+						</div>
+					</section>
+				</div>
+			)}
 			{/* MOBILE NAVIGATION DRAWER */}
 			{mobileMenuOpen && (
 				<div className="fixed inset-0 z-50 lg:hidden">

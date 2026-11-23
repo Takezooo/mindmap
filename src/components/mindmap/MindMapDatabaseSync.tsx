@@ -344,6 +344,7 @@ export default function MindMapDatabaseSync() {
 					new CustomEvent("mindmap:map-loaded", {
 						detail: {
 							rootNodeId: firstRootNode?.id ?? null,
+							title: row.title,
 						},
 					}),
 				);
