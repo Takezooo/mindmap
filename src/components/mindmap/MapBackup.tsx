@@ -1,9 +1,8 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import type { ChangeEvent } from "react";
-import { Download, Upload } from "lucide-react";
-import type { Edge } from "@xyflow/react";
+import { Download, Upload, X } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/client";
 import { useMindMapStore } from "@/stores/mindmap-store";
@@ -68,6 +67,11 @@ export default function MapBackup() {
 	const edges = useMindMapStore((state) => state.edges);
 
 	const fileInputRef = useRef<HTMLInputElement>(null);
+
+	const [feedback, setFeedback] = useState<{
+		type: "success" | "error";
+		message: string;
+	} | null>(null);
 
 	/* EXPORT */
 
@@ -207,7 +211,10 @@ export default function MapBackup() {
 
 				localStorage.setItem(storageKey, activeMap.id);
 
-				window.alert("Mind map imported successfully.");
+				setFeedback({
+					type: "success",
+					message: "Mind map imported successfully.",
+				});
 
 				// Reload from the database to initialize synchronization.
 				window.location.assign("/editor");
@@ -245,7 +252,10 @@ export default function MapBackup() {
 
 			localStorage.setItem(storageKey, newMap.id);
 
-			window.alert(`Imported successfully into a new map: "${importTitle}".`);
+			setFeedback({
+				type: "success",
+				message: `Imported "${importTitle}" into a new map.`,
+			});
 
 			// Force MindMapDatabaseSync to load the new database record.
 			window.location.assign("/editor");
@@ -257,7 +267,10 @@ export default function MapBackup() {
 					? String(error.message)
 					: "Invalid mind map backup file.";
 
-			window.alert(`Import failed: ${message}`);
+			setFeedback({
+				type: "error",
+				message: `Import failed: ${message}`,
+			});
 		} finally {
 			// Allow the same file to be imported again.
 			event.target.value = "";
@@ -297,6 +310,27 @@ export default function MapBackup() {
 				onChange={importMap}
 				className="hidden"
 			/>
+			{feedback && (
+				<div
+					role={feedback.type === "error" ? "alert" : "status"}
+					className={`mt-3 flex items-start justify-between gap-3 rounded-xl border p-3 text-xs ${
+						feedback.type === "success"
+							? "border-[#DCCBE8] bg-[#F1EAFB] text-[#6F527F]"
+							: "border-[#E8C5D5] bg-[#FCEFF4] text-[#A95F7D]"
+					}`}
+				>
+					<p>{feedback.message}</p>
+
+					<button
+						type="button"
+						onClick={() => setFeedback(null)}
+						aria-label="Dismiss notification"
+						className="shrink-0"
+					>
+						<X size={15} />
+					</button>
+				</div>
+			)}
 		</div>
 	);
 }

@@ -118,6 +118,12 @@ export default function DashboardPage() {
 		id: string;
 	} | null>(null);
 
+	const [pendingDelete, setPendingDelete] = useState<{
+		type: "map" | "folder";
+		id: string;
+		name: string;
+	} | null>(null);
+
 	const [editingName, setEditingName] = useState("");
 
 	/* LOAD DATABASE ========================================= */
@@ -444,7 +450,7 @@ export default function DashboardPage() {
 		router.push("/editor");
 	}
 
-	/* RENAME MAP ========================================= */
+	/* RENAME ========================================= */
 
 	function startRename(
 		type: "map" | "folder",
@@ -603,13 +609,10 @@ export default function DashboardPage() {
 	/* DELETE MAP ========================================= */
 
 	async function deleteMap(map: MapRecord) {
-		if (!userId) return;
+		if (!userId || working) return;
 
-		const confirmed = window.confirm(
-			`Permanently delete "${map.title}"? This cannot be undone.`,
-		);
-
-		if (!confirmed) return;
+		setWorking(true);
+		setErrorMessage("");
 
 		try {
 			const supabase = createClient();
@@ -630,45 +633,16 @@ export default function DashboardPage() {
 				localStorage.removeItem(activeKey);
 			}
 
-			setNotice("Mind map deleted.");
+			setNotice(`"${map.title}" was permanently deleted.`);
+			setPendingDelete(null);
 		} catch (error) {
 			setErrorMessage(getErrorMessage(error));
+		} finally {
+			setWorking(false);
 		}
 	}
 
 	/* FOLDER ACTIONS ========================================= */
-
-	// async function renameFolder(folder: FolderRecord) {
-	// 	const nextName = window
-	// 		.prompt("Enter the new subject name:", folder.name)
-	// 		?.trim();
-
-	// 	if (!nextName || nextName === folder.name || !userId) {
-	// 		return;
-	// 	}
-
-	// 	try {
-	// 		const supabase = createClient();
-
-	// 		const { error } = await supabase
-	// 			.from("folders")
-	// 			.update({ name: nextName })
-	// 			.eq("id", folder.id)
-	// 			.eq("user_id", userId);
-
-	// 		if (error) throw error;
-
-	// 		setFolders((current) =>
-	// 			current.map((item) =>
-	// 				item.id === folder.id ? { ...item, name: nextName } : item,
-	// 			),
-	// 		);
-
-	// 		setNotice("Subject renamed.");
-	// 	} catch (error) {
-	// 		setErrorMessage(getErrorMessage(error));
-	// 	}
-	// }
 
 	async function toggleFolderHidden(folder: FolderRecord) {
 		if (!userId) return;
@@ -700,6 +674,77 @@ export default function DashboardPage() {
 			setNotice(folder.is_hidden ? "Subject restored." : "Subject hidden.");
 		} catch (error) {
 			setErrorMessage(getErrorMessage(error));
+		}
+	}
+
+	async function deleteFolder(folder: FolderRecord) {
+		if (!userId || working) return;
+
+		setWorking(true);
+		setErrorMessage("");
+
+		try {
+			const supabase = createClient();
+
+			const parentId = folder.parent_id;
+
+			// Preserve maps inside the deleted subject.
+			const { error: mapsError } = await supabase
+				.from("mind_maps")
+				.update({ folder_id: parentId })
+				.eq("folder_id", folder.id)
+				.eq("user_id", userId);
+
+			if (mapsError) throw mapsError;
+
+			// Preserve child subjects by moving them to the deleted subject's parent.
+			const { error: foldersError } = await supabase
+				.from("folders")
+				.update({ parent_id: parentId })
+				.eq("parent_id", folder.id)
+				.eq("user_id", userId);
+
+			if (foldersError) throw foldersError;
+
+			// Delete only the selected subject.
+			const { error: deleteError } = await supabase
+				.from("folders")
+				.delete()
+				.eq("id", folder.id)
+				.eq("user_id", userId);
+
+			if (deleteError) throw deleteError;
+
+			setMaps((current) =>
+				current.map((map) =>
+					map.folder_id === folder.id ? { ...map, folder_id: parentId } : map,
+				),
+			);
+
+			setFolders((current) =>
+				current
+					.filter((item) => item.id !== folder.id)
+					.map((item) =>
+						item.parent_id === folder.id
+							? { ...item, parent_id: parentId }
+							: item,
+					),
+			);
+
+			if (selectedFolderId === folder.id) {
+				setSelectedFolderId(parentId);
+			}
+
+			setNotice(
+				`"${folder.name}" was deleted. Its maps and child subjects were preserved.`,
+			);
+
+			setPendingDelete(null);
+		} catch (error) {
+			console.error("Subject deletion failed:", error);
+			setErrorMessage(getErrorMessage(error));
+		} finally {
+			setWorking(false);
 		}
 	}
 
@@ -915,12 +960,16 @@ export default function DashboardPage() {
 									type="button"
 									onClick={() => {
 										setOpenMenuId(null);
-										void deleteMap(map);
+										setPendingDelete({
+											type: "map",
+											id: map.id,
+											name: map.title,
+										});
 									}}
 									className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-[#A95F7D] hover:bg-[#FCEFF4]"
 								>
 									<Trash2 size={16} />
-									Delete permanently
+									Delete
 								</button>
 							</div>
 						)}
@@ -1032,6 +1081,21 @@ export default function DashboardPage() {
 									<EyeOff size={15} />
 									Hide subject
 								</button>
+								<button
+									type="button"
+									onClick={() => {
+										setOpenMenuId(null);
+										setPendingDelete({
+											type: "folder",
+											id: folder.id,
+											name: folder.name,
+										});
+									}}
+									className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-[#A95F7D] hover:bg-[#FCEFF4]"
+								>
+									<Trash2 size={15} />
+									Delete
+								</button>
 							</div>
 						)}
 					</div>
@@ -1046,6 +1110,94 @@ export default function DashboardPage() {
 					<ChevronRight size={16} />
 				</button>
 			</article>
+		);
+	}
+
+	/* DELETE CONFIRMATION MODAL */
+
+	{
+		pendingDelete && (
+			<div className="fixed inset-0 z-[70] flex items-center justify-center bg-[#3F3545]/35 p-4">
+				<button
+					type="button"
+					className="absolute inset-0 cursor-default"
+					aria-label="Close confirmation"
+					onClick={() => {
+						if (!working) setPendingDelete(null);
+					}}
+				/>
+
+				<section
+					role="alertdialog"
+					aria-modal="true"
+					aria-labelledby="delete-dialog-title"
+					className="relative z-10 w-full max-w-md rounded-2xl border border-[#E7DDF0] bg-white p-6 shadow-2xl sm:p-7"
+				>
+					<div className="mb-5 flex items-start gap-4">
+						<div className="rounded-xl bg-[#FCEFF4] p-3 text-[#A95F7D]">
+							<Trash2 size={23} />
+						</div>
+
+						<div className="min-w-0 flex-1">
+							<h2
+								id="delete-dialog-title"
+								className="text-lg font-bold text-[#6F527F]"
+							>
+								Delete {pendingDelete.type === "map" ? "mind map" : "subject"}?
+							</h2>
+
+							<p className="mt-2 break-words text-sm text-[#887B91]">
+								Are you sure you want to permanently delete{" "}
+								<strong className="text-[#6F527F]">{pendingDelete.name}</strong>
+								?
+							</p>
+
+							{pendingDelete.type === "folder" && (
+								<p className="mt-3 rounded-xl bg-[#F1EAFB] p-3 text-xs leading-relaxed text-[#6F527F]">
+									Your mind maps and child subjects will be preserved and moved
+									to the parent subject. Only this subject will be deleted.
+								</p>
+							)}
+
+							<p className="mt-3 text-xs text-[#A95F7D]">
+								This action cannot be undone.
+							</p>
+						</div>
+					</div>
+
+					<div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+						<button
+							type="button"
+							disabled={working}
+							onClick={() => setPendingDelete(null)}
+							className="rounded-xl border border-[#E7DDF0] px-5 py-3 text-sm font-medium text-[#887B91] hover:bg-[#FAF7FF] disabled:opacity-50"
+						>
+							Cancel
+						</button>
+
+						<button
+							type="button"
+							disabled={working}
+							onClick={() => {
+								if (pendingDelete.type === "map") {
+									const map = maps.find((item) => item.id === pendingDelete.id);
+
+									if (map) void deleteMap(map);
+								} else {
+									const folder = folders.find(
+										(item) => item.id === pendingDelete.id,
+									);
+
+									if (folder) void deleteFolder(folder);
+								}
+							}}
+							className="rounded-xl bg-[#A95F7D] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#914A68] disabled:opacity-50"
+						>
+							{working ? "Deleting..." : "Delete"}
+						</button>
+					</div>
+				</section>
+			</div>
 		);
 	}
 
@@ -1739,6 +1891,96 @@ export default function DashboardPage() {
 					</div>
 				</div>
 			</div>
+			{/* DELETE CONFIRMATION MODAL */}
+			{pendingDelete && (
+				<div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#3F3545]/45 p-4">
+					<button
+						type="button"
+						className="absolute inset-0 cursor-default"
+						aria-label="Close confirmation"
+						onClick={() => {
+							if (!working) setPendingDelete(null);
+						}}
+					/>
+
+					<section
+						role="alertdialog"
+						aria-modal="true"
+						aria-labelledby="delete-dialog-title"
+						className="relative z-10 w-full max-w-md rounded-2xl border border-[#E7DDF0] bg-white p-6 shadow-2xl sm:p-7"
+					>
+						<div className="mb-5 flex items-start gap-4">
+							<div className="rounded-xl bg-[#FCEFF4] p-3 text-[#A95F7D]">
+								<Trash2 size={23} />
+							</div>
+
+							<div className="min-w-0 flex-1">
+								<h2
+									id="delete-dialog-title"
+									className="text-lg font-bold text-[#6F527F]"
+								>
+									Delete {pendingDelete.type === "map" ? "mind map" : "subject"}
+									?
+								</h2>
+
+								<p className="mt-2 break-words text-sm text-[#887B91]">
+									Are you sure you want to permanently delete{" "}
+									<strong className="text-[#6F527F]">
+										{pendingDelete.name}
+									</strong>
+									?
+								</p>
+
+								{pendingDelete.type === "folder" && (
+									<p className="mt-3 rounded-xl bg-[#F1EAFB] p-3 text-xs leading-relaxed text-[#6F527F]">
+										Your mind maps and child subjects will be preserved and
+										moved to the parent subject. Only this subject will be
+										deleted.
+									</p>
+								)}
+
+								<p className="mt-3 text-xs text-[#A95F7D]">
+									This action cannot be undone.
+								</p>
+							</div>
+						</div>
+
+						<div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+							<button
+								type="button"
+								disabled={working}
+								onClick={() => setPendingDelete(null)}
+								className="rounded-xl border border-[#E7DDF0] px-5 py-3 text-sm font-medium text-[#887B91] hover:bg-[#FAF7FF] disabled:opacity-50"
+							>
+								Cancel
+							</button>
+
+							<button
+								type="button"
+								disabled={working}
+								onClick={() => {
+									if (pendingDelete.type === "map") {
+										const map = maps.find(
+											(item) => item.id === pendingDelete.id,
+										);
+
+										if (map) void deleteMap(map);
+									} else {
+										const folder = folders.find(
+											(item) => item.id === pendingDelete.id,
+										);
+
+										if (folder) void deleteFolder(folder);
+									}
+								}}
+								className="rounded-xl bg-[#A95F7D] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#914A68] disabled:opacity-50"
+							>
+								{working ? "Deleting..." : "Delete permanently"}
+							</button>
+						</div>
+					</section>
+				</div>
+			)}
 			{/* MOBILE NAVIGATION DRAWER */}
 			{mobileMenuOpen && (
 				<div className="fixed inset-0 z-50 lg:hidden">

@@ -182,9 +182,7 @@ export default function Home() {
 
 					<div className="space-y-6">
 						<section>
-							<h3 className="popup-section-heading font-bold">
-								Patch v1.0
-							</h3>
+							<h3 className="popup-section-heading font-bold">Patch v1.0</h3>
 							<ul className="mt-2 list-disc space-y-1 pl-5">
 								<li>Created the basic mind map.</li>
 								<li>
@@ -210,9 +208,7 @@ export default function Home() {
 						</section>
 
 						<section>
-							<h3 className="popup-section-heading font-bold">
-								Patch v1.1
-							</h3>
+							<h3 className="popup-section-heading font-bold">Patch v1.1</h3>
 							<ul className="mt-2 list-disc space-y-1 pl-5">
 								<li>Fixed the flower on the homepage.</li>
 								<li>Set up the database using Supabase.</li>
@@ -223,9 +219,7 @@ export default function Home() {
 						</section>
 
 						<section>
-							<h3 className="popup-section-heading font-bold">
-								Patch v1.2
-							</h3>
+							<h3 className="popup-section-heading font-bold">Patch v1.2</h3>
 							<ul className="mt-2 list-disc space-y-1 pl-5">
 								<li>Added the dashboard.</li>
 								<li>Added dark mode to the main pages.</li>
@@ -237,9 +231,7 @@ export default function Home() {
 						</section>
 
 						<section>
-							<h3 className="popup-section-heading font-bold">
-								Patch v1.3
-							</h3>
+							<h3 className="popup-section-heading font-bold">Patch v1.3</h3>
 							<ul className="mt-2 list-disc space-y-1 pl-5">
 								<li>Brought back the delete shortcut.</li>
 								<li>
@@ -251,9 +243,7 @@ export default function Home() {
 						</section>
 
 						<section>
-							<h3 className="popup-section-heading font-bold">
-								Patch v1.4
-							</h3>
+							<h3 className="popup-section-heading font-bold">Patch v1.4</h3>
 							<ul className="mt-2 list-disc space-y-1 pl-5">
 								<li>Added keyboard shortcuts 0 and 1.</li>
 								<li>Fixed the issue with selecting multiple nodes.</li>
@@ -270,9 +260,7 @@ export default function Home() {
 						</section>
 
 						<section>
-							<h3 className="popup-section-heading font-bold">
-								Patch v1.5
-							</h3>
+							<h3 className="popup-section-heading font-bold">Patch v1.5</h3>
 							<ul className="mt-2 list-disc space-y-1 pl-5">
 								<li>Fixed dark mode styling for controls and sidebars.</li>
 								<li>
@@ -298,17 +286,16 @@ export default function Home() {
 						</section>
 
 						<section>
-							<h3 className="popup-section-heading font-bold">
-								Patch v1.6
-							</h3>
+							<h3 className="popup-section-heading font-bold">Patch v1.6</h3>
 							<ul className="mt-2 list-disc space-y-1 pl-5">
 								<li>Remove the Hide Sidebar and Hide Properties options.</li>
-								<li>
-									Fix the three-dot menu issue on the dashboard.
-								</li>
+								<li>Fix the three-dot menu issue on the dashboard.</li>
 								<li>Fix the node overlap issue.</li>
+								<li>Automatically create a new map when importing a map.</li>
 								<li>
-									Automatically create a new map when importing a map.
+									Fixed the delete confirmation modal display and added
+									permanent folder deletion with automatic reassignment of its
+									mind maps and child folders to the parent folder.
 								</li>
 							</ul>
 						</section>
