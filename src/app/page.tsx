@@ -134,7 +134,7 @@ export default function Home() {
 				/>
 			</div>
 			<div className="fixed bottom-5 left-5 z-30 flex items-center gap-2 sm:bottom-7 sm:left-8 text-sm font-medium">
-				v1.5
+				v1.6
 			</div>
 			<div className="fixed bottom-5 right-5 z-30 flex items-center gap-2 sm:bottom-7 sm:right-8">
 				<button
@@ -296,6 +296,22 @@ export default function Home() {
 								<li>Redesigned the Roadmap popup.</li>
 							</ul>
 						</section>
+
+						<section>
+							<h3 className="popup-section-heading font-bold">
+								Patch v1.6
+							</h3>
+							<ul className="mt-2 list-disc space-y-1 pl-5">
+								<li>Remove the Hide Sidebar and Hide Properties options.</li>
+								<li>
+									Fix the three-dot menu issue on the dashboard.
+								</li>
+								<li>Fix the node overlap issue.</li>
+								<li>
+									Automatically create a new map when importing a map.
+								</li>
+							</ul>
+						</section>
 					</div>
 				</InfoPopup>
 			)}
@@ -309,32 +325,6 @@ export default function Home() {
 						</p>
 
 						<div className="space-y-6">
-							{/* Patch v1.6 */}
-							<section className="roadmap-card relative rounded-xl p-4">
-								<div className="mb-4 flex items-center justify-between gap-3">
-									<h3 className="popup-section-heading font-bold">
-										Patch v1.6
-									</h3>
-									<span className="roadmap-status rounded-full px-3 py-1 text-xs font-semibold">
-										Planned
-									</span>
-								</div>
-
-								<ul className="space-y-3 text-sm">
-									{[
-										"Fix the three-dot menu issue on the dashboard.",
-										"Remove the Hide Sidebar and Hide Properties options.",
-										"Fix the node overlap issue.",
-										"Automatically create a new map when importing a map.",
-									].map((item) => (
-										<li key={item} className="flex items-start gap-3">
-											<span className="roadmap-checkbox mt-0.5 inline-flex h-4 w-4 shrink-0 rounded" />
-											<span>{item}</span>
-										</li>
-									))}
-								</ul>
-							</section>
-
 							{/* Patch v1.7 */}
 							<section className="roadmap-card relative rounded-xl p-4">
 								<div className="mb-4 flex items-center justify-between gap-3">
