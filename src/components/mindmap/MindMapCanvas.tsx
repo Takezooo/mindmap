@@ -47,6 +47,25 @@ const nodeTypes = {
 	mindMap: MindMapNode,
 };
 
+type LayoutRect = {
+	id: string;
+	x: number;
+	y: number;
+	width: number;
+	height: number;
+	right: number;
+	bottom: number;
+};
+
+function rectanglesOverlap(a: LayoutRect, b: LayoutRect, gap = 12) {
+	return (
+		a.x < b.right + gap &&
+		a.right + gap > b.x &&
+		a.y < b.bottom + gap &&
+		a.bottom + gap > b.y
+	);
+}
+
 // Prevent the same keyboard event from being processed
 // by multiple mounted MindMapFlow instances.
 const handledKeyboardEvents = new WeakSet<globalThis.KeyboardEvent>();
@@ -91,6 +110,11 @@ function MindMapFlow({
 	const dragStartSnapshot = useRef<{
 		nodes: Node<MindMapNodeData>[];
 		edges: Edge[];
+	} | null>(null);
+
+	const descriptionLayoutRef = useRef<{
+		originalPositions: Map<string, { x: number; y: number }>;
+		expandedOrder: string[];
 	} | null>(null);
 
 	useEffect(() => {
@@ -309,6 +333,252 @@ function MindMapFlow({
 			duration: 400,
 		});
 	}, [selectedNodeId, getNode, setCenter]);
+	useEffect(() => {
+		const expandedNodes = nodes.filter(
+			(node) => node.data.descriptionVisible && !node.hidden,
+		);
+
+		const snapshot = descriptionLayoutRef.current;
+
+		// Restore every node when all descriptions are closed.
+		if (expandedNodes.length === 0) {
+			if (!snapshot) return;
+
+			descriptionLayoutRef.current = null;
+
+			const history = useMindMapStore.temporal.getState();
+			history.pause();
+
+			setNodes(
+				useMindMapStore.getState().nodes.map((node) => {
+					const original = snapshot.originalPositions.get(node.id);
+
+					if (!original) return node;
+
+					return {
+						...node,
+						position: { ...original },
+					};
+				}),
+			);
+
+			history.resume();
+			return;
+		}
+
+		// Save original positions only once.
+		if (!descriptionLayoutRef.current) {
+			descriptionLayoutRef.current = {
+				originalPositions: new Map(
+					nodes.map((node) => [node.id, { ...node.position }]),
+				),
+				expandedOrder: [],
+			};
+		}
+
+		const layout = descriptionLayoutRef.current;
+
+		// Include nodes created while a description is open.
+		for (const node of nodes) {
+			if (!layout.originalPositions.has(node.id)) {
+				layout.originalPositions.set(node.id, {
+					...node.position,
+				});
+			}
+		}
+
+		const expandedIds = new Set(expandedNodes.map((node) => node.id));
+
+		// Preserve opening order. Newly opened descriptions go last.
+		layout.expandedOrder = layout.expandedOrder.filter((id) =>
+			expandedIds.has(id),
+		);
+
+		for (const node of expandedNodes) {
+			if (!layout.expandedOrder.includes(node.id)) {
+				layout.expandedOrder.push(node.id);
+			}
+		}
+
+		let firstFrame = 0;
+		let secondFrame = 0;
+
+		firstFrame = requestAnimationFrame(() => {
+			secondFrame = requestAnimationFrame(() => {
+				const gap = 12;
+
+				function getRect(
+					node: (typeof nodes)[number],
+					position: { x: number; y: number },
+				): LayoutRect {
+					const measured = getNode(node.id);
+
+					const width = measured?.measured?.width ?? measured?.width ?? 180;
+
+					const height = measured?.measured?.height ?? measured?.height ?? 80;
+
+					return {
+						id: node.id,
+						x: position.x,
+						y: position.y,
+						width,
+						height,
+						right: position.x + width,
+						bottom: position.y + height,
+					};
+				}
+
+				const originalPosition = (id: string) =>
+					layout.originalPositions.get(id) ?? { x: 0, y: 0 };
+
+				const nextPositions = new Map<string, { x: number; y: number }>();
+
+				// These are the only nodes allowed to trigger displacement.
+				const obstacles: LayoutRect[] = [];
+
+				// First, position expanded descriptions.
+				// The earliest opened description keeps its position.
+				// Later expanded descriptions move only when necessary.
+				for (const id of layout.expandedOrder) {
+					const node = nodes.find((item) => item.id === id);
+
+					if (!node || node.hidden) continue;
+
+					const original = originalPosition(id);
+					let position = { ...original };
+					let rect = getRect(node, position);
+
+					let attempts = 0;
+
+					while (
+						obstacles.some((obstacle) =>
+							rectanglesOverlap(rect, obstacle, gap),
+						) &&
+						attempts < 100
+					) {
+						const collisions = obstacles.filter((obstacle) =>
+							rectanglesOverlap(rect, obstacle, gap),
+						);
+
+						position = {
+							x: original.x,
+							y: Math.max(
+								position.y + 1,
+								...collisions.map((obstacle) => obstacle.bottom + gap),
+							),
+						};
+
+						rect = getRect(node, position);
+						attempts++;
+					}
+
+					nextPositions.set(id, position);
+					obstacles.push(rect);
+				}
+
+				// Process normal nodes from top to bottom.
+				// Only expanded or already-displaced nodes can push them.
+				const candidates = nodes
+					.filter((node) => !node.hidden && !expandedIds.has(node.id))
+					.sort((a, b) => {
+						const aPosition = originalPosition(a.id);
+						const bPosition = originalPosition(b.id);
+
+						return aPosition.y - bPosition.y;
+					});
+
+				for (const node of candidates) {
+					const original = originalPosition(node.id);
+
+					let position = { ...original };
+					let rect = getRect(node, position);
+
+					const initiallyAffected = obstacles.some((obstacle) =>
+						rectanglesOverlap(rect, obstacle, gap),
+					);
+
+					// Do not move a node unless it actually intersects
+					// an expanded or displaced node.
+					if (!initiallyAffected) continue;
+
+					let attempts = 0;
+
+					while (
+						obstacles.some((obstacle) =>
+							rectanglesOverlap(rect, obstacle, gap),
+						) &&
+						attempts < 100
+					) {
+						const collisions = obstacles.filter((obstacle) =>
+							rectanglesOverlap(rect, obstacle, gap),
+						);
+
+						position = {
+							x: original.x,
+							y: Math.max(
+								position.y + 1,
+								...collisions.map((obstacle) => obstacle.bottom + gap),
+							),
+						};
+
+						rect = getRect(node, position);
+						attempts++;
+					}
+
+					nextPositions.set(node.id, position);
+
+					// This displaced node can now push another node
+					// if they intersect.
+					obstacles.push(rect);
+				}
+
+				// Restore unaffected nodes to their original positions.
+				const updatedNodes = useMindMapStore.getState().nodes.map((node) => {
+					const position =
+						nextPositions.get(node.id) ?? layout.originalPositions.get(node.id);
+
+					if (!position) return node;
+
+					if (
+						node.position.x === position.x &&
+						node.position.y === position.y
+					) {
+						return node;
+					}
+
+					return {
+						...node,
+						position: { ...position },
+					};
+				});
+
+				const hasChanges = updatedNodes.some((node) => {
+					const current = useMindMapStore
+						.getState()
+						.nodes.find((item) => item.id === node.id);
+
+					return (
+						current &&
+						(current.position.x !== node.position.x ||
+							current.position.y !== node.position.y)
+					);
+				});
+
+				if (hasChanges) {
+					const history = useMindMapStore.temporal.getState();
+
+					history.pause();
+					setNodes(updatedNodes);
+					history.resume();
+				}
+			});
+		});
+
+		return () => {
+			cancelAnimationFrame(firstFrame);
+			cancelAnimationFrame(secondFrame);
+		};
+	}, [nodes, getNode, setNodes]);
 
 	useEffect(() => {
 		function handleMapLoaded(event: Event) {
