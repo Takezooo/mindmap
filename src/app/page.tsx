@@ -134,7 +134,7 @@ export default function Home() {
 				/>
 			</div>
 			<div className="fixed bottom-5 left-5 z-30 flex items-center gap-2 sm:bottom-7 sm:left-8 text-sm font-medium">
-				v1.6
+				v1.7
 			</div>
 			<div className="fixed bottom-5 right-5 z-30 flex items-center gap-2 sm:bottom-7 sm:right-8">
 				<button
