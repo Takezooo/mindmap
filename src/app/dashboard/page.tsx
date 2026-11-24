@@ -1,12 +1,6 @@
 "use client";
 
-import {
-	useCallback,
-	useEffect,
-	useMemo,
-	useState,
-	type ReactNode,
-} from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
 	ArrowLeft,
@@ -32,6 +26,7 @@ import {
 import { useRouter } from "next/navigation";
 import ThemeToggle from "@/components/theme/ThemeToggle";
 import { createClient } from "@/lib/supabase/client";
+import type { FlashcardDeck } from "@/types/flashcard";
 
 /* TYPES ========================================= */
 
@@ -58,8 +53,15 @@ type MapRecord = {
 	updated_at: string;
 };
 
-type Section = "overview" | "maps" | "subjects" | "hidden";
+type Section = "overview" | "maps" | "subjects" | "flashcards" | "hidden";
+
 type ModalType = "folder" | "map" | null;
+
+type PendingDelete = {
+	type: "map" | "folder" | "deck";
+	id: string;
+	name: string;
+};
 
 /* HELPERS ========================================= */
 
@@ -113,16 +115,24 @@ export default function DashboardPage() {
 
 	const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
+	const [decks, setDecks] = useState<FlashcardDeck[]>([]);
+	const [deckCardCounts, setDeckCardCounts] = useState<Record<string, number>>(
+		{},
+	);
+
+	const [deckModalOpen, setDeckModalOpen] = useState(false);
+	const [deckTitle, setDeckTitle] = useState("");
+	const [deckDescription, setDeckDescription] = useState("");
+	const [editingDeckId, setEditingDeckId] = useState<string | null>(null);
+
 	const [editingItem, setEditingItem] = useState<{
 		type: "map" | "folder";
 		id: string;
 	} | null>(null);
 
-	const [pendingDelete, setPendingDelete] = useState<{
-		type: "map" | "folder";
-		id: string;
-		name: string;
-	} | null>(null);
+	const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(
+		null,
+	);
 
 	const [editingName, setEditingName] = useState("");
 
@@ -150,7 +160,7 @@ export default function DashboardPage() {
 			setUserId(user.id);
 			setUserEmail(user.email ?? "");
 
-			const [folderResult, mapResult] = await Promise.all([
+			const [folderResult, mapResult, deckResult] = await Promise.all([
 				supabase
 					.from("folders")
 					.select("*")
@@ -161,25 +171,53 @@ export default function DashboardPage() {
 					.from("mind_maps")
 					.select("*")
 					.eq("user_id", user.id)
-					.order("updated_at", {
-						ascending: false,
-					}),
+					.order("updated_at", { ascending: false }),
+
+				supabase
+					.from("flashcard_decks")
+					.select("*")
+					.eq("user_id", user.id)
+					.order("updated_at", { ascending: false }),
 			]);
 
-			if (folderResult.error) {
-				throw folderResult.error;
-			}
+			if (folderResult.error) throw folderResult.error;
+			if (mapResult.error) throw mapResult.error;
+			if (deckResult.error) throw deckResult.error;
 
-			if (mapResult.error) {
-				throw mapResult.error;
-			}
+			const loadedDecks = (deckResult.data ?? []) as FlashcardDeck[];
 
 			setFolders((folderResult.data ?? []) as FolderRecord[]);
-
 			setMaps((mapResult.data ?? []) as MapRecord[]);
+			setDecks(loadedDecks);
+
+			// Load card counts for all decks in one query.
+			if (loadedDecks.length > 0) {
+				const { data: cardRows, error: cardError } = await supabase
+					.from("flashcards")
+					.select("deck_id")
+					.in(
+						"deck_id",
+						loadedDecks.map((deck) => deck.id),
+					);
+
+				if (cardError) throw cardError;
+
+				const counts: Record<string, number> = {};
+
+				for (const deck of loadedDecks) {
+					counts[deck.id] = 0;
+				}
+
+				for (const card of cardRows ?? []) {
+					counts[card.deck_id] = (counts[card.deck_id] ?? 0) + 1;
+				}
+
+				setDeckCardCounts(counts);
+			} else {
+				setDeckCardCounts({});
+			}
 		} catch (error) {
 			console.error(error);
-
 			setErrorMessage(getErrorMessage(error));
 		} finally {
 			setLoading(false);
@@ -748,6 +786,141 @@ export default function DashboardPage() {
 		}
 	}
 
+	/* FLASHCARD DECK MANAGEMENT ========================================= */
+
+	function openDeckModal(deck?: FlashcardDeck) {
+		setErrorMessage("");
+		setEditingDeckId(deck?.id ?? null);
+		setDeckTitle(deck?.title ?? "");
+		setDeckDescription(deck?.description ?? "");
+		setDeckModalOpen(true);
+	}
+
+	function closeDeckModal() {
+		if (working) return;
+
+		setDeckModalOpen(false);
+		setEditingDeckId(null);
+		setDeckTitle("");
+		setDeckDescription("");
+	}
+
+	async function saveDeck(event: React.FormEvent<HTMLFormElement>) {
+		event.preventDefault();
+
+		if (!userId || working) return;
+
+		const title = deckTitle.trim();
+
+		if (!title) return;
+
+		setWorking(true);
+		setErrorMessage("");
+		setNotice("");
+
+		try {
+			const supabase = createClient();
+
+			if (editingDeckId) {
+				const { data, error } = await supabase
+					.from("flashcard_decks")
+					.update({
+						title,
+						description: deckDescription.trim(),
+						updated_at: new Date().toISOString(),
+					})
+					.eq("id", editingDeckId)
+					.eq("user_id", userId)
+					.select()
+					.single();
+
+				if (error) throw error;
+
+				setDecks((current) =>
+					current
+						.map((deck) =>
+							deck.id === editingDeckId ? (data as FlashcardDeck) : deck,
+						)
+						.sort(
+							(a, b) =>
+								new Date(b.updated_at).getTime() -
+								new Date(a.updated_at).getTime(),
+						),
+				);
+
+				setNotice("Flashcard deck updated.");
+			} else {
+				const { data, error } = await supabase
+					.from("flashcard_decks")
+					.insert({
+						user_id: userId,
+						title,
+						description: deckDescription.trim(),
+						map_id: null,
+						folder_id: null,
+					})
+					.select()
+					.single();
+
+				if (error) throw error;
+
+				setDecks((current) => [data as FlashcardDeck, ...current]);
+				setDeckCardCounts((current) => ({
+					...current,
+					[data.id]: 0,
+				}));
+
+				setNotice("Flashcard deck created.");
+			}
+
+			closeDeckModal();
+		} catch (error) {
+			console.error(error);
+			setErrorMessage(getErrorMessage(error));
+		} finally {
+			setWorking(false);
+		}
+	}
+
+	async function deleteDeck(deckId: string) {
+		if (!userId || working) return;
+
+		setWorking(true);
+		setErrorMessage("");
+
+		try {
+			const supabase = createClient();
+
+			const { error } = await supabase
+				.from("flashcard_decks")
+				.delete()
+				.eq("id", deckId)
+				.eq("user_id", userId);
+
+			if (error) throw error;
+
+			setDecks((current) => current.filter((deck) => deck.id !== deckId));
+
+			setDeckCardCounts((current) => {
+				const next = { ...current };
+				delete next[deckId];
+				return next;
+			});
+
+			setNotice("Flashcard deck deleted.");
+			setPendingDelete(null);
+		} catch (error) {
+			console.error(error);
+			setErrorMessage(getErrorMessage(error));
+		} finally {
+			setWorking(false);
+		}
+	}
+
+	function openDeck(deck: FlashcardDeck) {
+		router.push(`/flashcards/${deck.id}`);
+	}
+
 	/* LOGOUT ========================================= */
 
 	async function logout() {
@@ -1113,93 +1286,93 @@ export default function DashboardPage() {
 		);
 	}
 
-	/* DELETE CONFIRMATION MODAL */
+	// /* DELETE CONFIRMATION MODAL */
 
-	{
-		pendingDelete && (
-			<div className="fixed inset-0 z-[70] flex items-center justify-center bg-[#3F3545]/35 p-4">
-				<button
-					type="button"
-					className="absolute inset-0 cursor-default"
-					aria-label="Close confirmation"
-					onClick={() => {
-						if (!working) setPendingDelete(null);
-					}}
-				/>
+	// {
+	// 	pendingDelete && (
+	// 		<div className="fixed inset-0 z-[70] flex items-center justify-center bg-[#3F3545]/35 p-4">
+	// 			<button
+	// 				type="button"
+	// 				className="absolute inset-0 cursor-default"
+	// 				aria-label="Close confirmation"
+	// 				onClick={() => {
+	// 					if (!working) setPendingDelete(null);
+	// 				}}
+	// 			/>
 
-				<section
-					role="alertdialog"
-					aria-modal="true"
-					aria-labelledby="delete-dialog-title"
-					className="relative z-10 w-full max-w-md rounded-2xl border border-[#E7DDF0] bg-white p-6 shadow-2xl sm:p-7"
-				>
-					<div className="mb-5 flex items-start gap-4">
-						<div className="rounded-xl bg-[#FCEFF4] p-3 text-[#A95F7D]">
-							<Trash2 size={23} />
-						</div>
+	// 			<section
+	// 				role="alertdialog"
+	// 				aria-modal="true"
+	// 				aria-labelledby="delete-dialog-title"
+	// 				className="relative z-10 w-full max-w-md rounded-2xl border border-[#E7DDF0] bg-white p-6 shadow-2xl sm:p-7"
+	// 			>
+	// 				<div className="mb-5 flex items-start gap-4">
+	// 					<div className="rounded-xl bg-[#FCEFF4] p-3 text-[#A95F7D]">
+	// 						<Trash2 size={23} />
+	// 					</div>
 
-						<div className="min-w-0 flex-1">
-							<h2
-								id="delete-dialog-title"
-								className="text-lg font-bold text-[#6F527F]"
-							>
-								Delete {pendingDelete.type === "map" ? "mind map" : "subject"}?
-							</h2>
+	// 					<div className="min-w-0 flex-1">
+	// 						<h2
+	// 							id="delete-dialog-title"
+	// 							className="text-lg font-bold text-[#6F527F]"
+	// 						>
+	// 							Delete {pendingDelete.type === "map" ? "mind map" : "subject"}?
+	// 						</h2>
 
-							<p className="mt-2 break-words text-sm text-[#887B91]">
-								Are you sure you want to permanently delete{" "}
-								<strong className="text-[#6F527F]">{pendingDelete.name}</strong>
-								?
-							</p>
+	// 						<p className="mt-2 break-words text-sm text-[#887B91]">
+	// 							Are you sure you want to permanently delete{" "}
+	// 							<strong className="text-[#6F527F]">{pendingDelete.name}</strong>
+	// 							?
+	// 						</p>
 
-							{pendingDelete.type === "folder" && (
-								<p className="mt-3 rounded-xl bg-[#F1EAFB] p-3 text-xs leading-relaxed text-[#6F527F]">
-									Your mind maps and child subjects will be preserved and moved
-									to the parent subject. Only this subject will be deleted.
-								</p>
-							)}
+	// 						{pendingDelete.type === "folder" && (
+	// 							<p className="mt-3 rounded-xl bg-[#F1EAFB] p-3 text-xs leading-relaxed text-[#6F527F]">
+	// 								Your mind maps and child subjects will be preserved and moved
+	// 								to the parent subject. Only this subject will be deleted.
+	// 							</p>
+	// 						)}
 
-							<p className="mt-3 text-xs text-[#A95F7D]">
-								This action cannot be undone.
-							</p>
-						</div>
-					</div>
+	// 						<p className="mt-3 text-xs text-[#A95F7D]">
+	// 							This action cannot be undone.
+	// 						</p>
+	// 					</div>
+	// 				</div>
 
-					<div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-						<button
-							type="button"
-							disabled={working}
-							onClick={() => setPendingDelete(null)}
-							className="rounded-xl border border-[#E7DDF0] px-5 py-3 text-sm font-medium text-[#887B91] hover:bg-[#FAF7FF] disabled:opacity-50"
-						>
-							Cancel
-						</button>
+	// 				<div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+	// 					<button
+	// 						type="button"
+	// 						disabled={working}
+	// 						onClick={() => setPendingDelete(null)}
+	// 						className="rounded-xl border border-[#E7DDF0] px-5 py-3 text-sm font-medium text-[#887B91] hover:bg-[#FAF7FF] disabled:opacity-50"
+	// 					>
+	// 						Cancel
+	// 					</button>
 
-						<button
-							type="button"
-							disabled={working}
-							onClick={() => {
-								if (pendingDelete.type === "map") {
-									const map = maps.find((item) => item.id === pendingDelete.id);
-
-									if (map) void deleteMap(map);
-								} else {
-									const folder = folders.find(
-										(item) => item.id === pendingDelete.id,
-									);
-
-									if (folder) void deleteFolder(folder);
-								}
-							}}
-							className="rounded-xl bg-[#A95F7D] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#914A68] disabled:opacity-50"
-						>
-							{working ? "Deleting..." : "Delete"}
-						</button>
-					</div>
-				</section>
-			</div>
-		);
-	}
+	// 					<button
+	// 						type="button"
+	// 						disabled={working}
+	// 						onClick={() => {
+	// 							if (pendingDelete.type === "map") {
+	// 								const map = maps.find((item) => item.id === pendingDelete.id);
+	// 								if (map) void deleteMap(map);
+	// 							} else if (pendingDelete.type === "folder") {
+	// 								const folder = folders.find(
+	// 									(item) => item.id === pendingDelete.id,
+	// 								);
+	// 								if (folder) void deleteFolder(folder);
+	// 							} else {
+	// 								void deleteDeck(pendingDelete.id);
+	// 							}
+	// 						}}
+	// 						className="rounded-xl bg-[#A95F7D] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#914A68] disabled:opacity-50"
+	// 					>
+	// 						{working ? "Deleting..." : "Delete"}
+	// 					</button>
+	// 				</div>
+	// 			</section>
+	// 		</div>
+	// 	);
+	// }
 
 	/* CREATE MODAL ========================================= */
 
@@ -1244,6 +1417,98 @@ export default function DashboardPage() {
 	/* =========================================
      SECTION CONTENT
   ========================================= */
+
+	function renderDeckCard(deck: FlashcardDeck) {
+		return (
+			<article
+				key={deck.id}
+				className="rounded-2xl border border-[#E7DDF0] bg-white p-5 transition hover:border-[#CDB9DF] hover:shadow-sm"
+			>
+				<div className="flex items-start gap-3">
+					<div className="rounded-xl bg-[#F1EAFB] p-3 text-[#795F9B]">
+						<BookOpen size={22} />
+					</div>
+
+					<div className="min-w-0 flex-1">
+						<h3 className="break-words font-semibold text-[#6F527F]">
+							{deck.title}
+						</h3>
+
+						<p className="mt-1 text-xs text-[#887B91]">
+							{deckCardCounts[deck.id] ?? 0} cards
+						</p>
+
+						{deck.description && (
+							<p className="mt-3 line-clamp-2 text-sm text-[#887B91]">
+								{deck.description}
+							</p>
+						)}
+
+						<p className="mt-3 text-xs text-[#A299AA]">
+							Updated {formatDate(deck.updated_at)}
+						</p>
+					</div>
+
+					<div className="relative" data-dashboard-menu>
+						<button
+							type="button"
+							onClick={() =>
+								setOpenMenuId((current) =>
+									current === `deck-${deck.id}` ? null : `deck-${deck.id}`,
+								)
+							}
+							aria-label={`Manage ${deck.title}`}
+							aria-expanded={openMenuId === `deck-${deck.id}`}
+							className="flex h-9 w-9 items-center justify-center rounded-lg text-[#887B91] hover:bg-[#F1EAFB]"
+						>
+							<MoreHorizontal size={19} />
+						</button>
+
+						{openMenuId === `deck-${deck.id}` && (
+							<div className="absolute right-0 z-20 mt-1 w-44 rounded-xl border border-[#E7DDF0] bg-white p-2 shadow-xl">
+								<button
+									type="button"
+									onClick={() => {
+										setOpenMenuId(null);
+										openDeckModal(deck);
+									}}
+									className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm text-[#6F527F] hover:bg-[#F8F4FC]"
+								>
+									<Pencil size={15} />
+									Rename / Edit
+								</button>
+
+								<button
+									type="button"
+									onClick={() => {
+										setOpenMenuId(null);
+										setPendingDelete({
+											type: "deck",
+											id: deck.id,
+											name: deck.title,
+										});
+									}}
+									className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm text-[#A95F7D] hover:bg-[#FCEFF4]"
+								>
+									<Trash2 size={15} />
+									Delete deck
+								</button>
+							</div>
+						)}
+					</div>
+				</div>
+
+				<button
+					type="button"
+					onClick={() => openDeck(deck)}
+					className="mt-5 flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-[#9B7EBD] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#6F527F]"
+				>
+					Open deck
+					<ArrowRight size={15} />
+				</button>
+			</article>
+		);
+	}
 
 	function renderPageContent() {
 		if (section === "overview") {
@@ -1566,6 +1831,59 @@ export default function DashboardPage() {
 			);
 		}
 
+		if (section === "flashcards") {
+			return (
+				<>
+					<div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+						<div>
+							<h1 className="text-2xl font-bold text-[#6F527F] sm:text-3xl">
+								Flashcards
+							</h1>
+
+							<p className="mt-2 text-sm text-[#887B91]">
+								Manage your decks and review materials.
+							</p>
+						</div>
+
+						<button
+							type="button"
+							onClick={() => openDeckModal()}
+							className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-[#9B7EBD] px-4 py-2 text-sm font-semibold text-white hover:bg-[#6F527F]"
+						>
+							<Plus size={17} />
+							New deck
+						</button>
+					</div>
+
+					{decks.length > 0 ? (
+						<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+							{decks.map(renderDeckCard)}
+						</div>
+					) : (
+						<div className="rounded-2xl border border-dashed border-[#DCCBE8] bg-white p-10 text-center">
+							<BookOpen size={34} className="mx-auto text-[#9B7EBD]" />
+
+							<h3 className="mt-3 font-semibold text-[#6F527F]">
+								No flashcard decks yet
+							</h3>
+
+							<p className="mt-1 text-sm text-[#887B91]">
+								Create a deck to start organizing your flashcards.
+							</p>
+
+							<button
+								type="button"
+								onClick={() => openDeckModal()}
+								className="mt-5 rounded-xl bg-[#9B7EBD] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#6F527F]"
+							>
+								Create your first deck
+							</button>
+						</div>
+					)}
+				</>
+			);
+		}
+
 		/* Hidden items */
 
 		return (
@@ -1692,6 +2010,8 @@ export default function DashboardPage() {
 
 						{navigationItem("maps", "All mind maps", Network)}
 
+						{navigationItem("flashcards", "Flashcards", BookOpen)}
+
 						{navigationItem("subjects", "My subjects", Folder)}
 
 						{navigationItem("hidden", "Hidden items", EyeOff)}
@@ -1776,6 +2096,7 @@ export default function DashboardPage() {
 		overview: "Overview",
 		maps: "All mind maps",
 		subjects: selectedFolder?.name ?? "My subjects",
+		flashcards: "Flashcards",
 		hidden: "Hidden items",
 	};
 
@@ -1919,7 +2240,12 @@ export default function DashboardPage() {
 									id="delete-dialog-title"
 									className="text-lg font-bold text-[#6F527F]"
 								>
-									Delete {pendingDelete.type === "map" ? "mind map" : "subject"}
+									Delete{" "}
+									{pendingDelete.type === "map"
+										? "mind map"
+										: pendingDelete.type === "folder"
+											? "subject"
+											: "flashcard deck"}
 									?
 								</h2>
 
@@ -1963,14 +2289,14 @@ export default function DashboardPage() {
 										const map = maps.find(
 											(item) => item.id === pendingDelete.id,
 										);
-
 										if (map) void deleteMap(map);
-									} else {
+									} else if (pendingDelete.type === "folder") {
 										const folder = folders.find(
 											(item) => item.id === pendingDelete.id,
 										);
-
 										if (folder) void deleteFolder(folder);
+									} else {
+										void deleteDeck(pendingDelete.id);
 									}
 								}}
 								className="rounded-xl bg-[#A95F7D] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#914A68] disabled:opacity-50"
@@ -2185,6 +2511,124 @@ export default function DashboardPage() {
 								</div>
 							</form>
 						)}
+					</section>
+				</div>
+			)}
+			{/* FLASHCARD DECK MODAL */}
+			{deckModalOpen && (
+				<div className="fixed inset-0 z-[80] flex items-center justify-center bg-[#3F3545]/35 p-4">
+					<button
+						type="button"
+						className="absolute inset-0 cursor-default"
+						aria-label="Close deck dialog"
+						onClick={closeDeckModal}
+					/>
+
+					<section
+						role="dialog"
+						aria-modal="true"
+						aria-labelledby="deck-dialog-title"
+						className="relative z-10 w-full max-w-md rounded-2xl border border-[#E7DDF0] bg-white p-6 shadow-2xl sm:p-7"
+					>
+						<div className="mb-6 flex items-start justify-between gap-4">
+							<div>
+								<div className="mb-3 inline-flex rounded-xl bg-[#F1EAFB] p-3 text-[#795F9B]">
+									<BookOpen size={23} />
+								</div>
+
+								<h2
+									id="deck-dialog-title"
+									className="text-xl font-bold text-[#6F527F]"
+								>
+									{editingDeckId
+										? "Edit flashcard deck"
+										: "Create flashcard deck"}
+								</h2>
+
+								<p className="mt-1 text-sm text-[#887B91]">
+									{editingDeckId
+										? "Update your deck information."
+										: "Create a deck to organize your study cards."}
+								</p>
+							</div>
+
+							<button
+								type="button"
+								onClick={closeDeckModal}
+								disabled={working}
+								aria-label="Close dialog"
+								className="rounded-lg p-2 text-[#887B91] hover:bg-[#F1EAFB]"
+							>
+								<X size={19} />
+							</button>
+						</div>
+
+						<form
+							onSubmit={(event) => void saveDeck(event)}
+							className="space-y-4"
+						>
+							<div>
+								<label
+									htmlFor="deck-title"
+									className="mb-2 block text-sm font-medium text-[#6F527F]"
+								>
+									Deck name
+								</label>
+
+								<input
+									id="deck-title"
+									value={deckTitle}
+									onChange={(event) => setDeckTitle(event.target.value)}
+									required
+									maxLength={150}
+									autoFocus
+									placeholder="e.g. Biology - Cell Structure"
+									className="w-full rounded-xl border border-[#E7DDF0] bg-[#FAF7FF] px-4 py-3 text-sm text-[#6F527F] outline-none focus:border-[#9B7EBD] focus:ring-2 focus:ring-[#F1EAFB]"
+								/>
+							</div>
+
+							<div>
+								<label
+									htmlFor="deck-description"
+									className="mb-2 block text-sm font-medium text-[#6F527F]"
+								>
+									Description (optional)
+								</label>
+
+								<textarea
+									id="deck-description"
+									value={deckDescription}
+									onChange={(event) => setDeckDescription(event.target.value)}
+									maxLength={500}
+									rows={3}
+									placeholder="What will this deck help you study?"
+									className="w-full resize-none rounded-xl border border-[#E7DDF0] bg-[#FAF7FF] px-4 py-3 text-sm text-[#6F527F] outline-none focus:border-[#9B7EBD] focus:ring-2 focus:ring-[#F1EAFB]"
+								/>
+							</div>
+
+							<div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
+								<button
+									type="button"
+									onClick={closeDeckModal}
+									disabled={working}
+									className="rounded-xl border border-[#E7DDF0] px-5 py-3 text-sm font-medium text-[#887B91] hover:bg-[#FAF7FF] disabled:opacity-50"
+								>
+									Cancel
+								</button>
+
+								<button
+									type="submit"
+									disabled={working || !deckTitle.trim()}
+									className="rounded-xl bg-[#9B7EBD] px-5 py-3 text-sm font-semibold text-white hover:bg-[#6F527F] disabled:opacity-50"
+								>
+									{working
+										? "Saving..."
+										: editingDeckId
+											? "Save changes"
+											: "Create deck"}
+								</button>
+							</div>
+						</form>
 					</section>
 				</div>
 			)}

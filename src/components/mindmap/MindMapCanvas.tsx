@@ -35,6 +35,7 @@ import {
 	PanelLeft,
 	PanelRight,
 	CircleX,
+	BookOpen,
 } from "lucide-react";
 
 import "@xyflow/react/dist/style.css";
@@ -73,11 +74,13 @@ const handledKeyboardEvents = new WeakSet<globalThis.KeyboardEvent>();
 type MindMapCanvasProps = {
 	onToggleSidebar?: () => void;
 	onToggleProperties?: () => void;
+	onGenerateFlashcards?: () => void;
 };
 
 function MindMapFlow({
 	onToggleSidebar,
 	onToggleProperties,
+	onGenerateFlashcards,
 }: MindMapCanvasProps) {
 	const nodes = useMindMapStore((state) => state.nodes);
 	const edges = useMindMapStore((state) => state.edges);
@@ -737,6 +740,7 @@ function MindMapFlow({
 					Grid: {gridVisible ? "On" : "Off"}
 					<span className="ml-2 opacity-60">G</span>
 				</button>
+
 				<button
 					type="button"
 					onClick={() => setSnapEnabled((current) => !current)}
@@ -746,6 +750,17 @@ function MindMapFlow({
 				>
 					Snap: {snapEnabled ? "On" : "Off"}
 					<span className="ml-2 opacity-60">Shift+G</span>
+				</button>
+
+				<button
+					type="button"
+					onClick={onGenerateFlashcards}
+					className="mindmap-sidebar-toggle rounded-lg border px-3 py-2 text-xs font-medium shadow-sm mindmap-canvas-tool"
+				>
+					<span className="flex items-center gap-2">
+						<BookOpen size={15} />
+						Generate Flashcards
+					</span>
 				</button>
 			</div>
 			{/* Compact tablet/mobile toolbar */}
@@ -959,6 +974,11 @@ function MindMapFlow({
 						<button type="button" onClick={onToggleProperties}>
 							<PanelRight size={16} />
 							Properties
+						</button>
+
+						<button type="button" onClick={onGenerateFlashcards}>
+							<BookOpen size={16} />
+							Generate Flashcards
 						</button>
 					</div>
 				)}
