@@ -1028,6 +1028,8 @@ function MindMapFlow({
 				)}
 			</div>
 			<ReactFlow<Node<MindMapNodeData>>
+				minZoom={0.01}
+				maxZoom={4}
 				nodes={nodes}
 				edges={edges}
 				nodeTypes={nodeTypes}
