@@ -91,6 +91,8 @@ function MindMapFlow({
 
 	const [selectionMode, setSelectionMode] = useState(false);
 
+	const [layoutRevision, setLayoutRevision] = useState(0);
+
 	const [toolbarOffset, setToolbarOffset] = useState({ x: 0, y: 0 });
 	const [toolbarMoreOpen, setToolbarMoreOpen] = useState(false);
 
@@ -110,6 +112,8 @@ function MindMapFlow({
 
 	const { setCenter, getNode, fitView: fitViewToCanvas } = useReactFlow();
 
+	const isNodeDragging = useRef(false);
+
 	const dragStartSnapshot = useRef<{
 		nodes: Node<MindMapNodeData>[];
 		edges: Edge[];
@@ -119,6 +123,14 @@ function MindMapFlow({
 		originalPositions: Map<string, { x: number; y: number }>;
 		expandedOrder: string[];
 	} | null>(null);
+
+	const latestNodesRef = useRef(nodes);
+	latestNodesRef.current = nodes;
+
+	const descriptionVisibilityKey = nodes
+		.filter((node) => node.data.descriptionVisible && !node.hidden)
+		.map((node) => node.id)
+		.join("|");
 
 	useEffect(() => {
 		function handleKeyboardShortcuts(event: globalThis.KeyboardEvent) {
@@ -336,8 +348,11 @@ function MindMapFlow({
 			duration: 400,
 		});
 	}, [selectedNodeId, getNode, setCenter]);
+
 	useEffect(() => {
-		const expandedNodes = nodes.filter(
+		const currentNodes = latestNodesRef.current;
+
+		const expandedNodes = currentNodes.filter(
 			(node) => node.data.descriptionVisible && !node.hidden,
 		);
 
@@ -408,6 +423,8 @@ function MindMapFlow({
 
 		firstFrame = requestAnimationFrame(() => {
 			secondFrame = requestAnimationFrame(() => {
+				if (isNodeDragging.current) return;
+				const layoutNodes = latestNodesRef.current;
 				const gap = 12;
 
 				function getRect(
@@ -581,7 +598,7 @@ function MindMapFlow({
 			cancelAnimationFrame(firstFrame);
 			cancelAnimationFrame(secondFrame);
 		};
-	}, [nodes, getNode, setNodes]);
+	}, [descriptionVisibilityKey, getNode, setNodes]);
 
 	useEffect(() => {
 		function handleMapLoaded(event: Event) {
@@ -681,6 +698,8 @@ function MindMapFlow({
 	};
 
 	function handleNodeDragStart() {
+		isNodeDragging.current = true;
+
 		const state = useMindMapStore.getState();
 
 		dragStartSnapshot.current = {
@@ -691,7 +710,12 @@ function MindMapFlow({
 		useMindMapStore.temporal.getState().pause();
 	}
 
-	function handleNodeDragStop() {
+	function handleNodeDragStop(
+		_: MouseEvent | TouchEvent,
+		draggedNode: Node<MindMapNodeData>,
+	) {
+		isNodeDragging.current = false;
+
 		const before = dragStartSnapshot.current;
 		const history = useMindMapStore.temporal;
 
@@ -699,9 +723,29 @@ function MindMapFlow({
 
 		dragStartSnapshot.current = null;
 
-		if (!before) return;
-
 		const current = useMindMapStore.getState();
+
+		// Preserve the dragged node's new position as its base position.
+		const finalNode = current.nodes.find((node) => node.id === draggedNode.id);
+
+		const layout = descriptionLayoutRef.current;
+
+		if (layout) {
+			layout.originalPositions.set(draggedNode.id, {
+				...draggedNode.position,
+			});
+		}
+
+		if (layout && finalNode) {
+			layout.originalPositions.set(finalNode.id, {
+				...finalNode.position,
+			});
+
+			// Recalculate the description layout after dragging.
+			setLayoutRevision((revision) => revision + 1);
+		}
+
+		if (!before) return;
 
 		const hasMoved = before.nodes.some((previousNode) => {
 			const currentNode = current.nodes.find(
