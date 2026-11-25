@@ -134,7 +134,7 @@ export default function Home() {
 				/>
 			</div>
 			<div className="fixed bottom-5 left-5 z-30 flex items-center gap-2 sm:bottom-7 sm:left-8 text-sm font-medium">
-				v1.6
+				v1.7
 			</div>
 			<div className="fixed bottom-5 right-5 z-30 flex items-center gap-2 sm:bottom-7 sm:right-8">
 				<button
@@ -299,6 +299,39 @@ export default function Home() {
 								</li>
 							</ul>
 						</section>
+
+						<section>
+							<h3 className="popup-section-heading font-bold">Patch v1.7</h3>
+							<ul className="mt-2 list-disc space-y-1 pl-5">
+								<li>
+									Implement flashcard and deck types with Supabase database
+									integration.
+								</li>
+								<li>Implement flashcard deck CRUD operations.</li>
+								<li>
+									Implement flashcard generation from mind maps with duplicate
+									card prevention.
+								</li>
+								<li>
+									Implement study session creation, completion, and answer
+									review recording.
+								</li>
+								<li>
+									Implement session history and summary retrieval with
+									authentication and ownership checks.
+								</li>
+								<li>
+									Implement interactive study sessions with answer submission,
+									progress tracking, and results.
+								</li>
+								<li>Add dark mode support to flashcard generation.</li>
+								<li>
+									Fix the node dragging jitter issue when opening descriptions
+									by preventing description layout recalculations from
+									interfering with active dragging.
+								</li>
+							</ul>
+						</section>
 					</div>
 				</InfoPopup>
 			)}
@@ -312,27 +345,6 @@ export default function Home() {
 						</p>
 
 						<div className="space-y-6">
-							{/* Patch v1.7 */}
-							<section className="roadmap-card relative rounded-xl p-4">
-								<div className="mb-4 flex items-center justify-between gap-3">
-									<h3 className="popup-section-heading font-bold">
-										Patch v1.7
-									</h3>
-									<span className="roadmap-status rounded-full px-3 py-1 text-xs font-semibold">
-										Planned
-									</span>
-								</div>
-
-								<ul className="space-y-3 text-sm">
-									<li className="flex items-start gap-3">
-										<span className="roadmap-checkbox mt-0.5 inline-flex h-4 w-4 shrink-0 rounded" />
-										<span>
-											Introduce a Flashcards feature with a scoring system.
-										</span>
-									</li>
-								</ul>
-							</section>
-
 							{/* Patch v1.8 */}
 							<section className="roadmap-card relative rounded-xl p-4">
 								<div className="mb-4 flex items-center justify-between gap-3">

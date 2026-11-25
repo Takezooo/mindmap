@@ -15,6 +15,10 @@ import UndoRedoControls from "@/components/mindmap/UndoRedoControls";
 import MapTree from "@/components/sidebar/MapTree";
 import MapBackup from "@/components/mindmap/MapBackup";
 import HelpButton from "@/components/help/HelpButton";
+
+import { getFlashcardDecks, generateFlashcardsFromMap } from "@/lib/flashcards";
+import type { FlashcardDeck } from "@/types/flashcard";
+
 import { useMindMapStore } from "@/stores/mindmap-store";
 
 type MobilePanel = "map" | "properties" | null;
@@ -30,16 +34,146 @@ export default function EditorPage() {
 
 	const [activeMapTitle, setActiveMapTitle] = useState("Loading map...");
 
+	const [activeMapId, setActiveMapId] = useState<string | null>(null);
+	const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
+
+	const [flashcardDialogOpen, setFlashcardDialogOpen] = useState(false);
+	const [flashcardDecks, setFlashcardDecks] = useState<FlashcardDeck[]>([]);
+
+	const [deckMode, setDeckMode] = useState<"new" | "existing">("new");
+	const [selectedDeckId, setSelectedDeckId] = useState("");
+
+	const [generationScope, setGenerationScope] = useState<"selected" | "all">(
+		"all",
+	);
+
+	const [flashcardLoading, setFlashcardLoading] = useState(false);
+	const [flashcardDecksLoading, setFlashcardDecksLoading] = useState(false);
+
+	const [flashcardError, setFlashcardError] = useState("");
+	const [flashcardResult, setFlashcardResult] = useState<{
+		generatedCount: number;
+		skippedCount: number;
+		deckTitle: string;
+	} | null>(null);
+
 	const addChild = useMindMapStore((state) => state.addChild);
 	const addParent = useMindMapStore((state) => state.addParent);
+
+	async function handleOpenFlashcardDialog() {
+		setFlashcardDialogOpen(true);
+		setFlashcardError("");
+		setFlashcardResult(null);
+
+		const nodes = useMindMapStore.getState().nodes;
+
+		const selectedNodes = nodes.filter((node) => node.selected);
+
+		setGenerationScope(
+			selectedNodes.length > 0 ||
+				(Boolean(selectedNodeId) &&
+					nodes.some((node) => node.id === selectedNodeId))
+				? "selected"
+				: "all",
+		);
+
+		setFlashcardDecksLoading(true);
+
+		try {
+			const decks = await getFlashcardDecks();
+			setFlashcardDecks(decks);
+		} catch (error) {
+			setFlashcardError(
+				error instanceof Error
+					? error.message
+					: "Failed to load flashcard decks.",
+			);
+		} finally {
+			setFlashcardDecksLoading(false);
+		}
+	}
+
+	async function handleGenerateFlashcards() {
+		if (!activeMapId) {
+			setFlashcardError("No active mind map was found.");
+			return;
+		}
+
+		const currentNodes = useMindMapStore.getState().nodes;
+
+		const selectedNodes = currentNodes.filter((node) => node.selected);
+
+		const nodesToGenerate =
+			generationScope === "selected"
+				? selectedNodes.length > 0
+					? selectedNodes
+					: currentNodes.filter((node) => node.id === selectedNodeId)
+				: currentNodes;
+
+		const eligibleNodes = nodesToGenerate.filter(
+			(node) =>
+				node.data.title.trim().length > 0 &&
+				node.data.description.trim().length > 0,
+		);
+
+		if (eligibleNodes.length === 0) {
+			setFlashcardError(
+				"No eligible nodes found. Nodes need both a title and description.",
+			);
+			return;
+		}
+
+		if (deckMode === "existing" && !selectedDeckId) {
+			setFlashcardError("Please select an existing deck.");
+			return;
+		}
+
+		setFlashcardLoading(true);
+		setFlashcardError("");
+		setFlashcardResult(null);
+
+		try {
+			const result = await generateFlashcardsFromMap({
+				mapId: activeMapId,
+				mapTitle: activeMapTitle,
+				folderId: activeFolderId,
+				nodes: eligibleNodes,
+				deckId: deckMode === "existing" ? selectedDeckId : undefined,
+			});
+
+			setFlashcardResult({
+				generatedCount: result.generatedCount,
+				skippedCount: result.skippedCount,
+				deckTitle: result.deck.title,
+			});
+
+			if (result.generatedCount > 0) {
+				const updatedDecks = await getFlashcardDecks();
+				setFlashcardDecks(updatedDecks);
+			}
+		} catch (error) {
+			setFlashcardError(
+				error instanceof Error
+					? error.message
+					: "Failed to generate flashcards.",
+			);
+		} finally {
+			setFlashcardLoading(false);
+		}
+	}
 
 	useEffect(() => {
 		function handleMapLoaded(event: Event) {
 			const customEvent = event as CustomEvent<{
 				title?: string;
+				mapId?: string;
+				folderId?: string | null;
 			}>;
 
 			setActiveMapTitle(customEvent.detail?.title || "Untitled Mind Map");
+
+			setActiveMapId(customEvent.detail?.mapId ?? null);
+			setActiveFolderId(customEvent.detail?.folderId ?? null);
 		}
 
 		window.addEventListener("mindmap:map-loaded", handleMapLoaded);
@@ -202,6 +336,7 @@ export default function EditorPage() {
 						onToggleProperties={() =>
 							setDesktopRightOpen((current) => !current)
 						}
+						onGenerateFlashcards={handleOpenFlashcardDialog}
 					/>
 				</section>
 
@@ -251,6 +386,7 @@ export default function EditorPage() {
 								current === "properties" ? null : "properties",
 							)
 						}
+						onGenerateFlashcards={handleOpenFlashcardDialog}
 					/>
 				</section>
 			</div>
@@ -371,6 +507,208 @@ export default function EditorPage() {
 							<NodeProperties />
 						</div>
 					</aside>
+				</div>
+			)}
+			{flashcardDialogOpen && (
+				<div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4">
+					<div className="w-full max-w-md rounded-2xl border border-[#E7DDF0] bg-white p-5 shadow-xl dark:border-[#51405F] dark:bg-[#241E2D]">
+						<div className="mb-5 flex items-center justify-between">
+							<div>
+								<h2 className="text-lg font-bold text-[#6F527F] dark:text-[#E8D9F5]">
+									Generate Flashcards
+								</h2>
+
+								<p className="mt-1 text-xs text-[#887B91] dark:text-[#B9A9C8]">
+									From {activeMapTitle}
+								</p>
+							</div>
+
+							<button
+								type="button"
+								onClick={() => setFlashcardDialogOpen(false)}
+								disabled={flashcardLoading}
+								className="rounded-lg p-2 text-[#887B91] hover:bg-[#F1EAFB] disabled:opacity-40 dark:hover:bg-[#40334E]"
+							>
+								<X size={18} />
+							</button>
+						</div>
+
+						{!flashcardResult && (
+							<>
+								{/* NODE SCOPE */}
+
+								<div className="mb-5">
+									<p className="mb-2 text-sm font-semibold text-[#6F527F] dark:text-[#E8D9F5]">
+										Generate from
+									</p>
+
+									<div className="space-y-2">
+										<label className="flex cursor-pointer items-center gap-3 rounded-lg border border-[#E7DDF0] p-3 text-sm dark:border-[#51405F] dark:text-[#E8D9F5]">
+											<input
+												type="radio"
+												name="generationScope"
+												value="all"
+												checked={generationScope === "all"}
+												onChange={() => setGenerationScope("all")}
+												className="accent-[#9B7EBD]"
+											/>
+											All eligible nodes
+										</label>
+
+										<label className="flex cursor-pointer items-center gap-3 rounded-lg border border-[#E7DDF0] p-3 text-sm dark:border-[#51405F] dark:text-[#E8D9F5]">
+											<input
+												type="radio"
+												name="generationScope"
+												value="selected"
+												checked={generationScope === "selected"}
+												onChange={() => setGenerationScope("selected")}
+												className="accent-[#9B7EBD]"
+											/>
+											Selected nodes
+										</label>
+									</div>
+
+									<p className="mt-2 text-xs text-[#887B91] dark:text-[#B9A9C8]">
+										Only nodes with both a title and description are included.
+									</p>
+								</div>
+
+								{/* DECK DESTINATION */}
+
+								<div className="mb-5">
+									<p className="mb-2 text-sm font-semibold text-[#6F527F] dark:text-[#E8D9F5]">
+										Save flashcards to
+									</p>
+
+									<div className="space-y-2">
+										<label className="flex cursor-pointer items-center gap-3 rounded-lg border border-[#E7DDF0] p-3 text-sm dark:border-[#51405F] dark:text-[#E8D9F5]">
+											<input
+												type="radio"
+												name="deckMode"
+												checked={deckMode === "new"}
+												onChange={() => setDeckMode("new")}
+												className="accent-[#9B7EBD]"
+											/>
+											Create a new deck
+										</label>
+
+										<label className="flex cursor-pointer items-center gap-3 rounded-lg border border-[#E7DDF0] p-3 text-sm dark:border-[#51405F] dark:text-[#E8D9F5]">
+											<input
+												type="radio"
+												name="deckMode"
+												checked={deckMode === "existing"}
+												onChange={() => setDeckMode("existing")}
+												className="accent-[#9B7EBD]"
+											/>
+											Add to an existing deck
+										</label>
+									</div>
+
+									{deckMode === "existing" && (
+										<div className="mt-3">
+											{flashcardDecksLoading ? (
+												<p className="text-sm text-[#887B91]">
+													Loading decks...
+												</p>
+											) : flashcardDecks.length === 0 ? (
+												<p className="text-sm text-[#887B91]">
+													No existing decks found. Create a new deck instead.
+												</p>
+											) : (
+												<select
+													value={selectedDeckId}
+													onChange={(event) =>
+														setSelectedDeckId(event.target.value)
+													}
+													className="w-full rounded-lg border border-[#DCCBE8] bg-white px-3 py-2.5 text-sm text-[#3F3545] outline-none focus:border-[#9B7EBD] dark:border-[#51405F] dark:bg-[#30283C] dark:text-[#E8D9F5]"
+												>
+													<option value="">Select a deck</option>
+
+													{flashcardDecks.map((deck) => (
+														<option key={deck.id} value={deck.id}>
+															{deck.title}
+														</option>
+													))}
+												</select>
+											)}
+										</div>
+									)}
+								</div>
+							</>
+						)}
+
+						{/* ERROR */}
+
+						{flashcardError && (
+							<div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">
+								{flashcardError}
+							</div>
+						)}
+
+						{/* RESULT */}
+
+						{flashcardResult && (
+							<div className="mb-5 rounded-xl border border-[#DCCBE8] bg-[#FAF7FF] p-4 dark:border-[#51405F] dark:bg-[#30283C]">
+								<h3 className="font-semibold text-[#6F527F] dark:text-[#E8D9F5]">
+									Generation complete
+								</h3>
+
+								<p className="mt-1 text-sm text-[#887B91] dark:text-[#B9A9C8]">
+									{flashcardResult.deckTitle}
+								</p>
+
+								<div className="mt-4 grid grid-cols-2 gap-3">
+									<div className="rounded-lg bg-white p-3 dark:bg-[#241E2D]">
+										<p className="text-2xl font-bold text-[#6F527F] dark:text-[#E8D9F5]">
+											{flashcardResult.generatedCount}
+										</p>
+										<p className="text-xs text-[#887B91]">Cards generated</p>
+									</div>
+
+									<div className="rounded-lg bg-white p-3 dark:bg-[#241E2D]">
+										<p className="text-2xl font-bold text-[#6F527F] dark:text-[#E8D9F5]">
+											{flashcardResult.skippedCount}
+										</p>
+										<p className="text-xs text-[#887B91]">Nodes skipped</p>
+									</div>
+								</div>
+							</div>
+						)}
+
+						{/* ACTIONS */}
+
+						<div className="flex justify-end gap-2">
+							<button
+								type="button"
+								onClick={() => {
+									setFlashcardDialogOpen(false);
+									setFlashcardError("");
+									setFlashcardResult(null);
+								}}
+								disabled={flashcardLoading}
+								className="rounded-lg border border-[#DCCBE8] px-4 py-2 text-sm font-medium text-[#6F527F] hover:bg-[#F1EAFB] disabled:opacity-40 dark:border-[#51405F] dark:text-[#E8D9F5] dark:hover:bg-[#40334E]"
+							>
+								{flashcardResult ? "Close" : "Cancel"}
+							</button>
+
+							{!flashcardResult && (
+								<button
+									type="button"
+									onClick={handleGenerateFlashcards}
+									disabled={
+										flashcardLoading ||
+										flashcardDecksLoading ||
+										!activeMapId ||
+										(deckMode === "existing" &&
+											(!selectedDeckId || flashcardDecks.length === 0))
+									}
+									className="rounded-lg bg-[#9B7EBD] px-4 py-2 text-sm font-semibold text-white hover:bg-[#6F527F] disabled:cursor-not-allowed disabled:opacity-50"
+								>
+									{flashcardLoading ? "Generating..." : "Generate"}
+								</button>
+							)}
+						</div>
+					</div>
 				</div>
 			)}
 		</main>

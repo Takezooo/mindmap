@@ -13,6 +13,7 @@ type MindMapEdges = StoreState["edges"];
 type MindMapRow = {
 	id: string;
 	title: string;
+	folder_id: string | null;
 	nodes: unknown;
 	edges: unknown;
 };
@@ -28,7 +29,7 @@ type LocalDraft = {
 	edges: MindMapEdges;
 };
 
-const SELECT_COLUMNS = "id,title,nodes,edges";
+const SELECT_COLUMNS = "id,title,folder_id,nodes,edges";
 
 function getErrorMessage(error: unknown) {
 	if (typeof error === "object" && error !== null && "message" in error) {
@@ -344,6 +345,8 @@ export default function MindMapDatabaseSync() {
 					new CustomEvent("mindmap:map-loaded", {
 						detail: {
 							rootNodeId: firstRootNode?.id ?? null,
+							mapId: row.id,
+							folderId: row.folder_id ?? null,
 							title: row.title,
 						},
 					}),

@@ -1,3 +1,11 @@
+export type Json =
+	| string
+	| number
+	| boolean
+	| null
+	| { [key: string]: Json | undefined }
+	| Json[];
+
 export interface MindMapRecord {
 	id: string;
 	user_id: string;
@@ -5,8 +13,8 @@ export interface MindMapRecord {
 
 	title: string;
 
-	nodes: unknown[];
-	edges: unknown[];
+	nodes: Json;
+	edges: Json;
 
 	viewport: {
 		x: number;

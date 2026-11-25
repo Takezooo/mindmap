@@ -35,6 +35,7 @@ import {
 	PanelLeft,
 	PanelRight,
 	CircleX,
+	BookOpen,
 } from "lucide-react";
 
 import "@xyflow/react/dist/style.css";
@@ -73,11 +74,13 @@ const handledKeyboardEvents = new WeakSet<globalThis.KeyboardEvent>();
 type MindMapCanvasProps = {
 	onToggleSidebar?: () => void;
 	onToggleProperties?: () => void;
+	onGenerateFlashcards?: () => void;
 };
 
 function MindMapFlow({
 	onToggleSidebar,
 	onToggleProperties,
+	onGenerateFlashcards,
 }: MindMapCanvasProps) {
 	const nodes = useMindMapStore((state) => state.nodes);
 	const edges = useMindMapStore((state) => state.edges);
@@ -87,6 +90,8 @@ function MindMapFlow({
 	const [snapEnabled, setSnapEnabled] = useState(true);
 
 	const [selectionMode, setSelectionMode] = useState(false);
+
+	const [layoutRevision, setLayoutRevision] = useState(0);
 
 	const [toolbarOffset, setToolbarOffset] = useState({ x: 0, y: 0 });
 	const [toolbarMoreOpen, setToolbarMoreOpen] = useState(false);
@@ -107,6 +112,8 @@ function MindMapFlow({
 
 	const { setCenter, getNode, fitView: fitViewToCanvas } = useReactFlow();
 
+	const isNodeDragging = useRef(false);
+
 	const dragStartSnapshot = useRef<{
 		nodes: Node<MindMapNodeData>[];
 		edges: Edge[];
@@ -116,6 +123,14 @@ function MindMapFlow({
 		originalPositions: Map<string, { x: number; y: number }>;
 		expandedOrder: string[];
 	} | null>(null);
+
+	const latestNodesRef = useRef(nodes);
+	latestNodesRef.current = nodes;
+
+	const descriptionVisibilityKey = nodes
+		.filter((node) => node.data.descriptionVisible && !node.hidden)
+		.map((node) => node.id)
+		.join("|");
 
 	useEffect(() => {
 		function handleKeyboardShortcuts(event: globalThis.KeyboardEvent) {
@@ -333,8 +348,11 @@ function MindMapFlow({
 			duration: 400,
 		});
 	}, [selectedNodeId, getNode, setCenter]);
+
 	useEffect(() => {
-		const expandedNodes = nodes.filter(
+		const currentNodes = latestNodesRef.current;
+
+		const expandedNodes = currentNodes.filter(
 			(node) => node.data.descriptionVisible && !node.hidden,
 		);
 
@@ -405,6 +423,8 @@ function MindMapFlow({
 
 		firstFrame = requestAnimationFrame(() => {
 			secondFrame = requestAnimationFrame(() => {
+				if (isNodeDragging.current) return;
+				const layoutNodes = latestNodesRef.current;
 				const gap = 12;
 
 				function getRect(
@@ -578,7 +598,7 @@ function MindMapFlow({
 			cancelAnimationFrame(firstFrame);
 			cancelAnimationFrame(secondFrame);
 		};
-	}, [nodes, getNode, setNodes]);
+	}, [descriptionVisibilityKey, getNode, setNodes]);
 
 	useEffect(() => {
 		function handleMapLoaded(event: Event) {
@@ -678,6 +698,8 @@ function MindMapFlow({
 	};
 
 	function handleNodeDragStart() {
+		isNodeDragging.current = true;
+
 		const state = useMindMapStore.getState();
 
 		dragStartSnapshot.current = {
@@ -688,7 +710,12 @@ function MindMapFlow({
 		useMindMapStore.temporal.getState().pause();
 	}
 
-	function handleNodeDragStop() {
+	function handleNodeDragStop(
+		_: MouseEvent | TouchEvent,
+		draggedNode: Node<MindMapNodeData>,
+	) {
+		isNodeDragging.current = false;
+
 		const before = dragStartSnapshot.current;
 		const history = useMindMapStore.temporal;
 
@@ -696,9 +723,29 @@ function MindMapFlow({
 
 		dragStartSnapshot.current = null;
 
-		if (!before) return;
-
 		const current = useMindMapStore.getState();
+
+		// Preserve the dragged node's new position as its base position.
+		const finalNode = current.nodes.find((node) => node.id === draggedNode.id);
+
+		const layout = descriptionLayoutRef.current;
+
+		if (layout) {
+			layout.originalPositions.set(draggedNode.id, {
+				...draggedNode.position,
+			});
+		}
+
+		if (layout && finalNode) {
+			layout.originalPositions.set(finalNode.id, {
+				...finalNode.position,
+			});
+
+			// Recalculate the description layout after dragging.
+			setLayoutRevision((revision) => revision + 1);
+		}
+
+		if (!before) return;
 
 		const hasMoved = before.nodes.some((previousNode) => {
 			const currentNode = current.nodes.find(
@@ -737,6 +784,7 @@ function MindMapFlow({
 					Grid: {gridVisible ? "On" : "Off"}
 					<span className="ml-2 opacity-60">G</span>
 				</button>
+
 				<button
 					type="button"
 					onClick={() => setSnapEnabled((current) => !current)}
@@ -746,6 +794,17 @@ function MindMapFlow({
 				>
 					Snap: {snapEnabled ? "On" : "Off"}
 					<span className="ml-2 opacity-60">Shift+G</span>
+				</button>
+
+				<button
+					type="button"
+					onClick={onGenerateFlashcards}
+					className="mindmap-sidebar-toggle rounded-lg border px-3 py-2 text-xs font-medium shadow-sm mindmap-canvas-tool"
+				>
+					<span className="flex items-center gap-2">
+						<BookOpen size={15} />
+						Generate Flashcards
+					</span>
 				</button>
 			</div>
 			{/* Compact tablet/mobile toolbar */}
@@ -960,10 +1019,17 @@ function MindMapFlow({
 							<PanelRight size={16} />
 							Properties
 						</button>
+
+						<button type="button" onClick={onGenerateFlashcards}>
+							<BookOpen size={16} />
+							Generate Flashcards
+						</button>
 					</div>
 				)}
 			</div>
 			<ReactFlow<Node<MindMapNodeData>>
+				minZoom={0.01}
+				maxZoom={4}
 				nodes={nodes}
 				edges={edges}
 				nodeTypes={nodeTypes}

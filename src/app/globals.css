@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* =========================================
    THEME VARIABLES
 ========================================= */
@@ -1392,5 +1394,226 @@ html.dark .mindmap-editor .react-flow__background pattern circle {
 	/* Keep the controls close to the screen edge */
 	.mindmap-editor .mindmap-sidebar-toggle {
 		min-height: 32px;
+	}
+}
+
+/* =========================================
+   FLASHCARD STUDY EXPERIENCE
+========================================= */
+
+.flashcard-study-page {
+	transition:
+		background-color 250ms ease,
+		color 250ms ease;
+}
+
+.study-panel {
+	transition:
+		background-color 250ms ease,
+		border-color 250ms ease,
+		box-shadow 250ms ease;
+}
+
+.study-card {
+	animation: study-card-enter 400ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+	box-shadow:
+		0 8px 30px rgb(111 82 127 / 6%),
+		0 0 24px rgb(155 126 189 / 9%);
+}
+
+.dark .study-card {
+	box-shadow:
+		0 10px 35px rgb(0 0 0 / 22%),
+		0 0 28px rgb(173 119 224 / 12%);
+}
+
+.study-icon-glow {
+	box-shadow: 0 0 22px rgb(155 126 189 / 18%);
+}
+
+.dark .study-icon-glow {
+	box-shadow: 0 0 25px rgb(173 119 224 / 20%);
+}
+
+/* Primary action glow */
+
+.study-primary-button {
+	box-shadow:
+		0 4px 14px rgb(121 95 155 / 22%),
+		0 0 18px rgb(155 126 189 / 12%);
+	transition:
+		transform 180ms ease,
+		box-shadow 180ms ease,
+		background-color 180ms ease;
+}
+
+.study-primary-button:hover:not(:disabled) {
+	transform: translateY(-2px);
+	box-shadow:
+		0 6px 20px rgb(121 95 155 / 30%),
+		0 0 25px rgb(155 126 189 / 25%);
+}
+
+.dark .study-primary-button {
+	box-shadow:
+		0 4px 16px rgb(0 0 0 / 20%),
+		0 0 20px rgb(173 119 224 / 16%);
+}
+
+.dark .study-primary-button:hover:not(:disabled) {
+	box-shadow:
+		0 6px 22px rgb(0 0 0 / 25%),
+		0 0 30px rgb(173 119 224 / 30%);
+}
+
+/* Navigation button */
+
+.study-back-button {
+	transition:
+		transform 180ms ease,
+		background-color 180ms ease,
+		border-color 180ms ease,
+		box-shadow 180ms ease;
+}
+
+.study-back-button:hover {
+	transform: translateY(-1px);
+	box-shadow: 0 4px 14px rgb(111 82 127 / 10%);
+}
+
+/* Answer reveal */
+
+.study-reveal {
+	animation: study-reveal-enter 350ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes study-reveal-enter {
+	from {
+		opacity: 0;
+		transform: translateY(9px) scale(0.985);
+		filter: blur(3px);
+	}
+
+	to {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+		filter: blur(0);
+	}
+}
+
+/* Card transition */
+
+@keyframes study-card-enter {
+	from {
+		opacity: 0;
+		transform: translateY(12px) scale(0.99);
+	}
+
+	to {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
+}
+
+/* Progress bar */
+
+.study-progress-fill {
+	transition: width 500ms cubic-bezier(0.22, 1, 0.36, 1);
+	box-shadow: 0 0 12px rgb(155 126 189 / 45%);
+}
+
+.dark .study-progress-fill {
+	box-shadow: 0 0 14px rgb(177 139 218 / 55%);
+}
+
+/* Correct / incorrect interactions */
+
+.study-answer-button {
+	transition:
+		transform 160ms ease,
+		box-shadow 160ms ease,
+		background-color 160ms ease;
+}
+
+.study-answer-button:hover:not(:disabled) {
+	transform: translateY(-2px);
+}
+
+.study-correct-button:hover:not(:disabled) {
+	box-shadow: 0 0 18px rgb(76 145 107 / 18%);
+}
+
+.study-incorrect-button:hover:not(:disabled) {
+	box-shadow: 0 0 18px rgb(169 95 125 / 18%);
+}
+
+.study-answer-button:active:not(:disabled) {
+	transform: scale(0.98);
+}
+
+/* Results */
+
+.study-result-icon {
+	animation: study-result-enter 550ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+	box-shadow:
+		0 0 20px rgb(155 126 189 / 18%),
+		0 0 40px rgb(155 126 189 / 10%);
+}
+
+.dark .study-result-icon {
+	box-shadow:
+		0 0 24px rgb(173 119 224 / 24%),
+		0 0 45px rgb(173 119 224 / 12%);
+}
+
+@keyframes study-result-enter {
+	0% {
+		opacity: 0;
+		transform: scale(0.7) rotate(-10deg);
+	}
+
+	70% {
+		opacity: 1;
+		transform: scale(1.08) rotate(3deg);
+	}
+
+	100% {
+		opacity: 1;
+		transform: scale(1) rotate(0);
+	}
+}
+
+.study-stat-card {
+	transition:
+		transform 180ms ease,
+		box-shadow 180ms ease;
+}
+
+.study-stat-card:hover {
+	transform: translateY(-3px);
+	box-shadow: 0 6px 18px rgb(111 82 127 / 9%);
+}
+
+/* Keyboard accessibility */
+
+.flashcard-study-page button:focus-visible {
+	outline: 2px solid #9b7ebd;
+	outline-offset: 3px;
+}
+
+.dark .flashcard-study-page button:focus-visible {
+	outline-color: #c7a6ea;
+}
+
+/* Respect reduced-motion preferences */
+
+@media (prefers-reduced-motion: reduce) {
+	.flashcard-study-page *,
+	.flashcard-study-page *::before,
+	.flashcard-study-page *::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		scroll-behavior: auto !important;
+		transition-duration: 0.01ms !important;
 	}
 }
