@@ -19,27 +19,26 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
 	const [theme, setTheme] = useState<Theme>("light");
+	const [mounted, setMounted] = useState(false);
 
 	useEffect(() => {
 		const savedTheme = window.localStorage.getItem("mindmap-theme");
-
 		const initialTheme: Theme = savedTheme === "dark" ? "dark" : "light";
 
 		setTheme(initialTheme);
-
 		document.documentElement.classList.toggle("dark", initialTheme === "dark");
+		setMounted(true);
 	}, []);
 
+	useEffect(() => {
+		if (!mounted) return;
+
+		document.documentElement.classList.toggle("dark", theme === "dark");
+		window.localStorage.setItem("mindmap-theme", theme);
+	}, [theme, mounted]);
+
 	function toggleTheme() {
-		setTheme((currentTheme) => {
-			const nextTheme: Theme = currentTheme === "light" ? "dark" : "light";
-
-			document.documentElement.classList.toggle("dark", nextTheme === "dark");
-
-			window.localStorage.setItem("mindmap-theme", nextTheme);
-
-			return nextTheme;
-		});
+		setTheme((current) => (current === "light" ? "dark" : "light"));
 	}
 
 	return (
