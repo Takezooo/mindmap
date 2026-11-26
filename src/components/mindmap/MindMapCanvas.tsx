@@ -32,6 +32,7 @@ import {
 	GitBranch,
 	Grid3X3,
 	Magnet,
+	Scaling,
 	PanelLeft,
 	PanelRight,
 	CircleX,
@@ -40,32 +41,13 @@ import {
 
 import "@xyflow/react/dist/style.css";
 
-import MindMapNode from "./MindMapNode";
+import MindMapNode, { MindMapModeContext } from "./MindMapNode";
 import type { MindMapNodeData } from "@/types/mindmap";
 import { useMindMapStore } from "@/stores/mindmap-store";
 
 const nodeTypes = {
 	mindMap: MindMapNode,
 };
-
-type LayoutRect = {
-	id: string;
-	x: number;
-	y: number;
-	width: number;
-	height: number;
-	right: number;
-	bottom: number;
-};
-
-function rectanglesOverlap(a: LayoutRect, b: LayoutRect, gap = 12) {
-	return (
-		a.x < b.right + gap &&
-		a.right + gap > b.x &&
-		a.y < b.bottom + gap &&
-		a.bottom + gap > b.y
-	);
-}
 
 // Prevent the same keyboard event from being processed
 // by multiple mounted MindMapFlow instances.
@@ -89,9 +71,11 @@ function MindMapFlow({
 	const [gridVisible, setGridVisible] = useState(true);
 	const [snapEnabled, setSnapEnabled] = useState(true);
 
-	const [selectionMode, setSelectionMode] = useState(false);
+	const [activeMode, setActiveMode] = useState<"selection" | "resize" | null>(null);
+	const activeModeRef = useRef<"selection" | "resize" | null>(null);
+	const selectionMode = activeMode === "selection";
+	const resizeMode = activeMode === "resize";
 
-	const [layoutRevision, setLayoutRevision] = useState(0);
 
 	const [toolbarOffset, setToolbarOffset] = useState({ x: 0, y: 0 });
 	const [toolbarMoreOpen, setToolbarMoreOpen] = useState(false);
@@ -112,27 +96,32 @@ function MindMapFlow({
 
 	const { setCenter, getNode, fitView: fitViewToCanvas } = useReactFlow();
 
-	const isNodeDragging = useRef(false);
+	// Stable mode switch: update the ref synchronously so keyboard events never
+	// depend on a stale render or wait for the next effect registration.
+	const switchMode = useCallback((mode: "selection" | "resize") => {
+		const nextMode = activeModeRef.current === mode ? null : mode;
+
+		if (nextMode === "resize") {
+			const state = useMindMapStore.getState();
+			state.setNodes(
+				state.nodes.map((node) => node.selected ? { ...node, selected: false } : node),
+			);
+			state.setEdges(
+				state.edges.map((edge) => edge.selected ? { ...edge, selected: false } : edge),
+			);
+			state.setActiveNodeId(null);
+		}
+
+		activeModeRef.current = nextMode;
+		setActiveMode(nextMode);
+	}, []);
+
 
 	const dragStartSnapshot = useRef<{
 		nodes: Node<MindMapNodeData>[];
 		edges: Edge[];
 	} | null>(null);
 
-	const descriptionLayoutRef = useRef<{
-		originalPositions: Map<string, { x: number; y: number }>;
-		expandedOrder: string[];
-	} | null>(null);
-
-	const latestNodesRef = useRef(nodes);
-	latestNodesRef.current = nodes;
-
-	const descriptionVisibilityKey = nodes
-		.filter((node) => node.data.descriptionVisible && !node.hidden)
-		.map((node) => node.id)
-		.join("|");
-
-	const nodeIdsKey = nodes.map((node) => node.id).join("|");
 
 	useEffect(() => {
 		function handleKeyboardShortcuts(event: globalThis.KeyboardEvent) {
@@ -157,6 +146,7 @@ function MindMapFlow({
 			const state = useMindMapStore.getState();
 			const modifier = event.ctrlKey || event.metaKey;
 			const key = event.key.toLowerCase();
+			const code = event.code;
 
 			// SHIFT + TAB: Add parent.
 			// Without a selection, create an independent root node.
@@ -242,12 +232,31 @@ function MindMapFlow({
 				return;
 			}
 
-			// W: Toggle selection mode
-			if (!modifier && !event.altKey && key === "w") {
+			// R: Toggle resize-only mode.
+			if (!modifier && !event.altKey && code === "KeyR") {
 				event.preventDefault();
 				event.stopPropagation();
 
-				setSelectionMode((current) => !current);
+				switchMode("resize");
+				return;
+			}
+
+			// ESCAPE: Exit resize mode.
+			if (event.key === "Escape" && activeModeRef.current === "resize") {
+				event.preventDefault();
+				event.stopPropagation();
+
+				activeModeRef.current = null;
+				setActiveMode(null);
+				return;
+			}
+
+			// W: Toggle selection mode
+			if (!modifier && !event.altKey && code === "KeyW") {
+				event.preventDefault();
+				event.stopPropagation();
+
+				switchMode("selection");
 				return;
 			}
 
@@ -328,259 +337,13 @@ function MindMapFlow({
 			}
 		}
 
-		window.addEventListener("keydown", handleKeyboardShortcuts);
+		window.addEventListener("keydown", handleKeyboardShortcuts, true);
 
 		return () => {
-			window.removeEventListener("keydown", handleKeyboardShortcuts);
+			window.removeEventListener("keydown", handleKeyboardShortcuts, true);
 		};
-	}, [fitViewToCanvas, setSelectionMode]);
+	}, [fitViewToCanvas, switchMode]);
 
-	// useEffect(() => {
-	// 	if (!selectedNodeId) return;
-
-	// 	const node = getNode(selectedNodeId);
-
-	// 	if (!node) return;
-
-	// 	const width = node.measured?.width ?? 150;
-	// 	const height = node.measured?.height ?? 80;
-
-	// 	setCenter(node.position.x + width / 2, node.position.y + height / 2, {
-	// 		zoom: 1.2,
-	// 		duration: 400,
-	// 	});
-	// }, [selectedNodeId, getNode, setCenter]);
-
-	useEffect(() => {
-		const currentNodes = latestNodesRef.current;
-
-		const expandedNodes = currentNodes.filter(
-			(node) => node.data.descriptionVisible && !node.hidden,
-		);
-
-		const snapshot = descriptionLayoutRef.current;
-
-		// Keep all current node positions when descriptions are closed.
-		if (expandedNodes.length === 0) {
-			descriptionLayoutRef.current = null;
-			return;
-		}
-
-		// Save original positions only once.
-		if (!descriptionLayoutRef.current) {
-			descriptionLayoutRef.current = {
-				originalPositions: new Map(
-					currentNodes.map((node) => [node.id, { ...node.position }]),
-				),
-				expandedOrder: [],
-			};
-		}
-
-		const layout = descriptionLayoutRef.current;
-
-		// Include nodes created while a description is open.
-		for (const node of currentNodes) {
-			if (!layout.originalPositions.has(node.id)) {
-				layout.originalPositions.set(node.id, {
-					...node.position,
-				});
-			}
-		}
-
-		const expandedIds = new Set(expandedNodes.map((node) => node.id));
-
-		// Preserve opening order. Newly opened descriptions go last.
-		layout.expandedOrder = layout.expandedOrder.filter((id) =>
-			expandedIds.has(id),
-		);
-
-		for (const node of expandedNodes) {
-			if (!layout.expandedOrder.includes(node.id)) {
-				layout.expandedOrder.push(node.id);
-			}
-		}
-
-		let firstFrame = 0;
-		let secondFrame = 0;
-
-		firstFrame = requestAnimationFrame(() => {
-			secondFrame = requestAnimationFrame(() => {
-				if (isNodeDragging.current) return;
-				const layoutNodes = latestNodesRef.current;
-				const gap = 12;
-
-				function getRect(
-					node: (typeof nodes)[number],
-					position: { x: number; y: number },
-				): LayoutRect {
-					const measured = getNode(node.id);
-
-					const width = measured?.measured?.width ?? measured?.width ?? 180;
-
-					const height = measured?.measured?.height ?? measured?.height ?? 80;
-
-					return {
-						id: node.id,
-						x: position.x,
-						y: position.y,
-						width,
-						height,
-						right: position.x + width,
-						bottom: position.y + height,
-					};
-				}
-
-				const originalPosition = (id: string) =>
-					layout.originalPositions.get(id) ?? { x: 0, y: 0 };
-
-				const nextPositions = new Map<string, { x: number; y: number }>();
-
-				// These are the only nodes allowed to trigger displacement.
-				const obstacles: LayoutRect[] = [];
-
-				// First, position expanded descriptions.
-				// The earliest opened description keeps its position.
-				// Later expanded descriptions move only when necessary.
-				for (const id of layout.expandedOrder) {
-					const node = layoutNodes.find((item) => item.id === id);
-
-					if (!node || node.hidden) continue;
-
-					const original = originalPosition(id);
-					let position = { ...original };
-					let rect = getRect(node, position);
-
-					let attempts = 0;
-
-					while (
-						obstacles.some((obstacle) =>
-							rectanglesOverlap(rect, obstacle, gap),
-						) &&
-						attempts < 100
-					) {
-						const collisions = obstacles.filter((obstacle) =>
-							rectanglesOverlap(rect, obstacle, gap),
-						);
-
-						position = {
-							x: original.x,
-							y: Math.max(
-								position.y + 1,
-								...collisions.map((obstacle) => obstacle.bottom + gap),
-							),
-						};
-
-						rect = getRect(node, position);
-						attempts++;
-					}
-
-					nextPositions.set(id, position);
-					obstacles.push(rect);
-				}
-
-				// Process normal nodes from top to bottom.
-				// Only expanded or already-displaced nodes can push them.
-				const candidates = layoutNodes
-					.filter((node) => !node.hidden && !expandedIds.has(node.id))
-					.sort((a, b) => {
-						const aPosition = originalPosition(a.id);
-						const bPosition = originalPosition(b.id);
-
-						return aPosition.y - bPosition.y;
-					});
-
-				for (const node of candidates) {
-					const original = originalPosition(node.id);
-
-					let position = { ...original };
-					let rect = getRect(node, position);
-
-					const initiallyAffected = obstacles.some((obstacle) =>
-						rectanglesOverlap(rect, obstacle, gap),
-					);
-
-					// Do not move a node unless it actually intersects
-					// an expanded or displaced node.
-					if (!initiallyAffected) continue;
-
-					let attempts = 0;
-
-					while (
-						obstacles.some((obstacle) =>
-							rectanglesOverlap(rect, obstacle, gap),
-						) &&
-						attempts < 100
-					) {
-						const collisions = obstacles.filter((obstacle) =>
-							rectanglesOverlap(rect, obstacle, gap),
-						);
-
-						position = {
-							x: original.x,
-							y: Math.max(
-								position.y + 1,
-								...collisions.map((obstacle) => obstacle.bottom + gap),
-							),
-						};
-
-						rect = getRect(node, position);
-						attempts++;
-					}
-
-					nextPositions.set(node.id, position);
-
-					// This displaced node can now push another node
-					// if they intersect.
-					obstacles.push(rect);
-				}
-
-				// Restore unaffected nodes to their original positions.
-				const updatedNodes = useMindMapStore.getState().nodes.map((node) => {
-					const position = nextPositions.get(node.id);
-
-					// Do not reset nodes that were not displaced.
-					if (!position) return node;
-
-					if (
-						node.position.x === position.x &&
-						node.position.y === position.y
-					) {
-						return node;
-					}
-
-					return {
-						...node,
-						position: { ...position },
-					};
-				});
-
-				const hasChanges = updatedNodes.some((node) => {
-					const current = useMindMapStore
-						.getState()
-						.nodes.find((item) => item.id === node.id);
-
-					return (
-						current &&
-						(current.position.x !== node.position.x ||
-							current.position.y !== node.position.y)
-					);
-				});
-
-				if (hasChanges) {
-					const history = useMindMapStore.temporal.getState();
-
-					history.pause();
-					setNodes(updatedNodes);
-					history.resume();
-				}
-			});
-		});
-
-		return () => {
-			cancelAnimationFrame(firstFrame);
-			cancelAnimationFrame(secondFrame);
-		};
-	}, [descriptionVisibilityKey, nodeIdsKey, layoutRevision, getNode, setNodes]);
 
 	useEffect(() => {
 		function handleMapLoaded(event: Event) {
@@ -680,8 +443,6 @@ function MindMapFlow({
 	};
 
 	function handleNodeDragStart() {
-		isNodeDragging.current = true;
-
 		const state = useMindMapStore.getState();
 
 		dragStartSnapshot.current = {
@@ -692,40 +453,15 @@ function MindMapFlow({
 		useMindMapStore.temporal.getState().pause();
 	}
 
-	function handleNodeDragStop(
-		_: MouseEvent | TouchEvent,
-		draggedNode: Node<MindMapNodeData>,
-	) {
-		isNodeDragging.current = false;
-
+	function handleNodeDragStop() {
 		const before = dragStartSnapshot.current;
 		const history = useMindMapStore.temporal;
-
-		history.getState().resume();
 
 		dragStartSnapshot.current = null;
 
 		const current = useMindMapStore.getState();
 
-		// Preserve the dragged node's new position as its base position.
-		const finalNode = current.nodes.find((node) => node.id === draggedNode.id);
-
-		const layout = descriptionLayoutRef.current;
-
-		if (layout) {
-			layout.originalPositions.set(draggedNode.id, {
-				...draggedNode.position,
-			});
-		}
-
-		if (layout && finalNode) {
-			layout.originalPositions.set(finalNode.id, {
-				...finalNode.position,
-			});
-
-			// Recalculate the description layout after dragging.
-			setLayoutRevision((revision) => revision + 1);
-		}
+		history.getState().resume();
 
 		if (!before) return;
 
@@ -756,28 +492,6 @@ function MindMapFlow({
 	return (
 		<div className="relative h-full w-full touch-none">
 			<div className="mindmap-desktop-canvas-tools absolute left-4 top-4 z-10 flex gap-2">
-				<button
-					type="button"
-					onClick={() => setGridVisible((current) => !current)}
-					className={`mindmap-sidebar-toggle rounded-lg border px-3 py-2 text-xs font-medium shadow-sm mindmap-canvas-tool ${
-						gridVisible ? "mindmap-canvas-tool-active" : ""
-					}`}
-				>
-					Grid: {gridVisible ? "On" : "Off"}
-					<span className="ml-2 opacity-60">G</span>
-				</button>
-
-				<button
-					type="button"
-					onClick={() => setSnapEnabled((current) => !current)}
-					className={`mindmap-sidebar-toggle rounded-lg border px-3 py-2 text-xs font-medium shadow-sm mindmap-canvas-tool ${
-						snapEnabled ? "mindmap-canvas-tool-active" : ""
-					}`}
-				>
-					Snap: {snapEnabled ? "On" : "Off"}
-					<span className="ml-2 opacity-60">Shift+G</span>
-				</button>
-
 				<button
 					type="button"
 					onClick={onGenerateFlashcards}
@@ -856,13 +570,24 @@ function MindMapFlow({
 
 					<button
 						type="button"
-						onClick={() => setSelectionMode((current) => !current)}
+						onClick={() => switchMode("selection")}
 						className={selectionMode ? "active" : ""}
 						aria-pressed={selectionMode}
 						title="Selection mode (W)"
 						aria-label="Toggle selection mode"
 					>
 						<MousePointer2 size={19} />
+					</button>
+
+					<button
+						type="button"
+						onClick={() => switchMode("resize")}
+						className={resizeMode ? "active" : ""}
+						aria-pressed={resizeMode}
+						title="Resize mode (R)"
+						aria-label="Toggle resize mode"
+					>
+						<Scaling size={19} />
 					</button>
 
 					<button
@@ -972,6 +697,7 @@ function MindMapFlow({
 							Sibling
 						</button>
 
+
 						<button
 							type="button"
 							className={gridVisible ? "active" : ""}
@@ -1009,6 +735,12 @@ function MindMapFlow({
 					</div>
 				)}
 			</div>
+			{resizeMode && (
+				<div className="absolute right-4 top-4 z-20 rounded-lg border border-[#a85f7d]/40 bg-white/95 px-3 py-2 text-xs font-medium text-[#795F9B] shadow-sm">
+					Resize mode active · R or Esc to exit
+				</div>
+			)}
+			<MindMapModeContext.Provider value={resizeMode}>
 			<ReactFlow<Node<MindMapNodeData>>
 				minZoom={0.01}
 				maxZoom={4}
@@ -1030,8 +762,10 @@ function MindMapFlow({
 				panOnScroll={false}
 				zoomOnPinch={true}
 				zoomOnDoubleClick={false}
-				nodesDraggable={true}
-				nodesConnectable={true}
+				// Keep elements selectable in Resize Mode so a node can be selected
+				// and its NodeResizer handles become visible. Only dragging is disabled.
+				nodesDraggable={!resizeMode}
+				nodesConnectable={!resizeMode}
 				// ===
 				onNodeDragStop={handleNodeDragStop}
 				multiSelectionKeyCode="Control"
@@ -1049,6 +783,7 @@ function MindMapFlow({
 				<Controls />
 				<MiniMap nodeColor="#c77d9b" />
 			</ReactFlow>
+			</MindMapModeContext.Provider>
 		</div>
 	);
 }

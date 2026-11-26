@@ -1,6 +1,8 @@
 "use client";
 
 import {
+	createContext,
+	useContext,
 	useEffect,
 	useLayoutEffect,
 	useRef,
@@ -10,6 +12,7 @@ import {
 
 import {
 	Handle,
+	NodeResizer,
 	Position,
 	useReactFlow,
 	type NodeProps,
@@ -17,6 +20,9 @@ import {
 } from "@xyflow/react";
 
 import type { MindMapNodeData } from "@/types/mindmap";
+import { useMindMapStore } from "@/stores/mindmap-store";
+
+export const MindMapModeContext = createContext(false);
 
 function getShapeClass(shape: MindMapNodeData["shape"]) {
 	switch (shape) {
@@ -67,8 +73,15 @@ export default function MindMapNode({
 	id,
 	data,
 	selected,
+	width,
+	height,
 }: NodeProps<Node<MindMapNodeData>>) {
-	const { updateNodeData } = useReactFlow();
+	const { updateNodeData, getViewport } = useReactFlow();
+	const resizeMode = useContext(MindMapModeContext);
+	const resizeSnapshotRef = useRef<{
+		nodes: Node<MindMapNodeData>[];
+		edges: ReturnType<typeof useMindMapStore.getState>["edges"];
+	} | null>(null);
 
 	const [isEditingTitle, setIsEditingTitle] = useState(false);
 	const [draftTitle, setDraftTitle] = useState(data.title ?? "");
@@ -79,12 +92,107 @@ export default function MindMapNode({
 	const titleRef = useRef<HTMLTextAreaElement>(null);
 	const descriptionRef = useRef<HTMLTextAreaElement>(null);
 	const cancelBlurRef = useRef(false);
+	const nodeContentRef = useRef<HTMLDivElement>(null);
 
 	const shapeClass = getShapeClass(data.shape);
 	const colorClass = getColorClass(data.color);
 
 	const isDiamond = data.shape === "diamond";
 	const descriptionVisible = data.descriptionVisible ?? false;
+
+	const previousDescriptionVisibleRef = useRef(descriptionVisible);
+
+	// Measure the rendered DOM after the description has expanded. React Flow's
+	// measured dimensions can still be stale on the first render after expansion.
+	// Only this node is repositioned; every other node keeps its exact position.
+	useLayoutEffect(() => {
+		const wasVisible = previousDescriptionVisibleRef.current;
+		previousDescriptionVisibleRef.current = descriptionVisible;
+		if (!descriptionVisible || wasVisible) return;
+
+		let firstFrame = 0;
+		let secondFrame = 0;
+		firstFrame = window.requestAnimationFrame(() => {
+			secondFrame = window.requestAnimationFrame(() => {
+				const ownElement = nodeContentRef.current;
+				if (!ownElement) return;
+
+				const ownRect = ownElement.getBoundingClientRect();
+				if (!ownRect.width || !ownRect.height) return;
+
+				const flowNodes = useMindMapStore.getState().nodes;
+				const visibleIds = new Set(
+					flowNodes.filter((node) => !node.hidden).map((node) => node.id),
+				);
+				const obstacles = Array.from(
+					document.querySelectorAll<HTMLElement>(".react-flow__node[data-id]"),
+				)
+					.filter(
+						(element) =>
+							element.dataset.id !== id &&
+							visibleIds.has(element.dataset.id ?? ""),
+					)
+					.map((element) => element.getBoundingClientRect())
+					.filter((rect) => rect.width > 0 && rect.height > 0);
+
+				const gap = 16;
+				const overlaps = (left: number, top: number) =>
+					obstacles.some(
+						(rect) =>
+							left < rect.right + gap &&
+							left + ownRect.width + gap > rect.left &&
+							top < rect.bottom + gap &&
+							top + ownRect.height + gap > rect.top,
+					);
+
+				if (!overlaps(ownRect.left, ownRect.top)) return;
+
+				const xCandidates = new Set<number>([ownRect.left]);
+				const yCandidates = new Set<number>([ownRect.top]);
+				for (const rect of obstacles) {
+					xCandidates.add(rect.left - ownRect.width - gap);
+					xCandidates.add(rect.right + gap);
+					yCandidates.add(rect.top - ownRect.height - gap);
+					yCandidates.add(rect.bottom + gap);
+				}
+
+				let best: { left: number; top: number; distance: number } | null = null;
+				for (const left of xCandidates) {
+					for (const top of yCandidates) {
+						if (overlaps(left, top)) continue;
+						const distance = Math.hypot(left - ownRect.left, top - ownRect.top);
+						if (distance > 0 && (!best || distance < best.distance)) {
+							best = { left, top, distance };
+						}
+					}
+				}
+
+				if (!best) return;
+				const zoom = getViewport().zoom || 1;
+				const deltaX = (best.left - ownRect.left) / zoom;
+				const deltaY = (best.top - ownRect.top) / zoom;
+				const latest = useMindMapStore.getState();
+				latest.setNodes(
+					latest.nodes.map((node) =>
+						node.id === id
+							? {
+									...node,
+									position: {
+										x: node.position.x + deltaX,
+										y: node.position.y + deltaY,
+									},
+								}
+							: node,
+					),
+				);
+			});
+		});
+
+		return () => {
+			if (firstFrame) window.cancelAnimationFrame(firstFrame);
+			if (secondFrame) window.cancelAnimationFrame(secondFrame);
+		};
+	}, [descriptionVisible, getViewport, id]);
 
 	useEffect(() => {
 		setDraftTitle(data.title ?? "");
@@ -185,8 +293,59 @@ export default function MindMapNode({
 		});
 	}
 
+	function handleResizeStart() {
+		const state = useMindMapStore.getState();
+
+		resizeSnapshotRef.current = {
+			nodes: state.nodes,
+			edges: state.edges,
+		};
+
+		useMindMapStore.temporal.getState().pause();
+	}
+
+	function handleResizeEnd() {
+		const before = resizeSnapshotRef.current;
+		const history = useMindMapStore.temporal;
+
+		history.getState().resume();
+		resizeSnapshotRef.current = null;
+
+		if (!before) return;
+
+		const current = useMindMapStore.getState();
+		const hasResized = before.nodes.some((previousNode) => {
+			const currentNode = current.nodes.find(
+				(node) => node.id === previousNode.id,
+			);
+
+			return (
+				currentNode &&
+				(currentNode.width !== previousNode.width ||
+					currentNode.height !== previousNode.height)
+			);
+		});
+
+		if (!hasResized) return;
+
+		history.setState((state) => ({
+			pastStates: [...state.pastStates, before].slice(-100),
+			futureStates: [],
+		}));
+	}
+
 	return (
-		<div className="relative">
+		<div ref={nodeContentRef} className="relative">
+			<NodeResizer
+				isVisible={selected && resizeMode}
+				minWidth={140}
+				minHeight={80}
+				maxWidth={500}
+				maxHeight={400}
+				keepAspectRatio={["circle", "diamond", "pill"].includes(data.shape)}
+				onResizeStart={handleResizeStart}
+				onResizeEnd={handleResizeEnd}
+			/>
 			<Handle
 				type="target"
 				position={Position.Left}
@@ -195,11 +354,13 @@ export default function MindMapNode({
 
 			<div
 				data-node-color={data.color}
-				className={`mindmap-node-card box-border w-fit min-w-[140px] max-w-[280px] border px-5 py-3 shadow-sm transition ${shapeClass} ${colorClass} ${
-					selected
-						? "is-selected border-2 border-[#a85f7d] shadow-lg scale-[1.02]"
-						: ""
+				className={`mindmap-node-card box-border min-w-[140px] min-h-[80px] max-w-none border px-5 py-3 shadow-sm transition ${shapeClass} ${colorClass} ${
+					selected ? "is-selected border-2 border-[#a85f7d] shadow-lg" : ""
 				}`}
+				style={{
+					width: width ? "100%" : "fit-content",
+					height: height ? "100%" : "auto",
+				}}
 			>
 				<div
 					className={`${
