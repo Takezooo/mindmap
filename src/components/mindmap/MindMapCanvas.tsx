@@ -132,6 +132,8 @@ function MindMapFlow({
 		.map((node) => node.id)
 		.join("|");
 
+	const nodeIdsKey = nodes.map((node) => node.id).join("|");
+
 	useEffect(() => {
 		function handleKeyboardShortcuts(event: globalThis.KeyboardEvent) {
 			const target = event.target;
@@ -333,21 +335,21 @@ function MindMapFlow({
 		};
 	}, [fitViewToCanvas, setSelectionMode]);
 
-	useEffect(() => {
-		if (!selectedNodeId) return;
+	// useEffect(() => {
+	// 	if (!selectedNodeId) return;
 
-		const node = getNode(selectedNodeId);
+	// 	const node = getNode(selectedNodeId);
 
-		if (!node) return;
+	// 	if (!node) return;
 
-		const width = node.measured?.width ?? 150;
-		const height = node.measured?.height ?? 80;
+	// 	const width = node.measured?.width ?? 150;
+	// 	const height = node.measured?.height ?? 80;
 
-		setCenter(node.position.x + width / 2, node.position.y + height / 2, {
-			zoom: 1.2,
-			duration: 400,
-		});
-	}, [selectedNodeId, getNode, setCenter]);
+	// 	setCenter(node.position.x + width / 2, node.position.y + height / 2, {
+	// 		zoom: 1.2,
+	// 		duration: 400,
+	// 	});
+	// }, [selectedNodeId, getNode, setCenter]);
 
 	useEffect(() => {
 		const currentNodes = latestNodesRef.current;
@@ -358,29 +360,9 @@ function MindMapFlow({
 
 		const snapshot = descriptionLayoutRef.current;
 
-		// Restore every node when all descriptions are closed.
+		// Keep all current node positions when descriptions are closed.
 		if (expandedNodes.length === 0) {
-			if (!snapshot) return;
-
 			descriptionLayoutRef.current = null;
-
-			const history = useMindMapStore.temporal.getState();
-			history.pause();
-
-			setNodes(
-				useMindMapStore.getState().nodes.map((node) => {
-					const original = snapshot.originalPositions.get(node.id);
-
-					if (!original) return node;
-
-					return {
-						...node,
-						position: { ...original },
-					};
-				}),
-			);
-
-			history.resume();
 			return;
 		}
 
@@ -388,7 +370,7 @@ function MindMapFlow({
 		if (!descriptionLayoutRef.current) {
 			descriptionLayoutRef.current = {
 				originalPositions: new Map(
-					nodes.map((node) => [node.id, { ...node.position }]),
+					currentNodes.map((node) => [node.id, { ...node.position }]),
 				),
 				expandedOrder: [],
 			};
@@ -397,7 +379,7 @@ function MindMapFlow({
 		const layout = descriptionLayoutRef.current;
 
 		// Include nodes created while a description is open.
-		for (const node of nodes) {
+		for (const node of currentNodes) {
 			if (!layout.originalPositions.has(node.id)) {
 				layout.originalPositions.set(node.id, {
 					...node.position,
@@ -460,7 +442,7 @@ function MindMapFlow({
 				// The earliest opened description keeps its position.
 				// Later expanded descriptions move only when necessary.
 				for (const id of layout.expandedOrder) {
-					const node = nodes.find((item) => item.id === id);
+					const node = layoutNodes.find((item) => item.id === id);
 
 					if (!node || node.hidden) continue;
 
@@ -498,7 +480,7 @@ function MindMapFlow({
 
 				// Process normal nodes from top to bottom.
 				// Only expanded or already-displaced nodes can push them.
-				const candidates = nodes
+				const candidates = layoutNodes
 					.filter((node) => !node.hidden && !expandedIds.has(node.id))
 					.sort((a, b) => {
 						const aPosition = originalPosition(a.id);
@@ -554,9 +536,9 @@ function MindMapFlow({
 
 				// Restore unaffected nodes to their original positions.
 				const updatedNodes = useMindMapStore.getState().nodes.map((node) => {
-					const position =
-						nextPositions.get(node.id) ?? layout.originalPositions.get(node.id);
+					const position = nextPositions.get(node.id);
 
+					// Do not reset nodes that were not displaced.
 					if (!position) return node;
 
 					if (
@@ -598,7 +580,7 @@ function MindMapFlow({
 			cancelAnimationFrame(firstFrame);
 			cancelAnimationFrame(secondFrame);
 		};
-	}, [descriptionVisibilityKey, getNode, setNodes]);
+	}, [descriptionVisibilityKey, nodeIdsKey, layoutRevision, getNode, setNodes]);
 
 	useEffect(() => {
 		function handleMapLoaded(event: Event) {

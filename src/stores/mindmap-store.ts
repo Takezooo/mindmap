@@ -241,7 +241,9 @@ export const useMindMapStore = create<MindMapState>()(
 							type: "mindMap",
 							position: {
 								x: currentNode.position.x,
-								y: currentNode.position.y + 140,
+								y:
+									Math.max(...siblings.map((sibling) => sibling.position.y)) +
+									140,
 							},
 							data: {
 								title: "New Node",
