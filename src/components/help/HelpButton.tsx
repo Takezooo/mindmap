@@ -44,6 +44,10 @@ export default function HelpButton() {
 		["Shift + Tab", "Add parent node"],
 		["Enter", "Add sibling node"],
 		["Delete / Backspace", "Delete selected nodes or connections"],
+		["Q", "Toggle map sidebar (editor)"],
+		["W", "Toggle selection mode"],
+		["E", "Toggle properties sidebar (editor)"],
+		["R", "Toggle resize mode"],
 		["Ctrl + A", "Select all nodes"],
 		["Ctrl + Z", "Undo"],
 		["Ctrl + Shift + Z", "Redo"],
@@ -52,10 +56,7 @@ export default function HelpButton() {
 		["1", "Focus on the first parent/root node"],
 		["G", "Toggle grid"],
 		["Shift + G", "Toggle snap to grid"],
-		["W", "Toggle selection mode"],
-		["H", "Open or close Help"],
-		["Q", "Toggle map sidebar (editor)"],
-		["E", "Toggle properties sidebar (editor)"],
+		["H", "Open or close Help"]
 	];
 
 	return (
