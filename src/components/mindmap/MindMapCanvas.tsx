@@ -37,16 +37,19 @@ import {
 	PanelRight,
 	CircleX,
 	BookOpen,
+	StickyNote,
 } from "lucide-react";
 
 import "@xyflow/react/dist/style.css";
 
 import MindMapNode, { MindMapModeContext } from "./MindMapNode";
+import NoteNode from "./NoteNode";
 import type { MindMapNodeData } from "@/types/mindmap";
 import { useMindMapStore } from "@/stores/mindmap-store";
 
 const nodeTypes = {
 	mindMap: MindMapNode,
+	note: NoteNode,
 };
 
 // Prevent the same keyboard event from being processed
@@ -71,12 +74,14 @@ function MindMapFlow({
 	const [gridVisible, setGridVisible] = useState(true);
 	const [snapEnabled, setSnapEnabled] = useState(true);
 
-	const [activeMode, setActiveMode] = useState<"selection" | "resize" | null>(null);
+	const [activeMode, setActiveMode] = useState<"selection" | "resize" | null>(
+		null,
+	);
 	const activeModeRef = useRef<"selection" | "resize" | null>(null);
 	const selectionMode = activeMode === "selection";
 	const resizeMode = activeMode === "resize";
 
-
+	const canvasRootRef = useRef<HTMLDivElement>(null);
 	const [toolbarOffset, setToolbarOffset] = useState({ x: 0, y: 0 });
 	const [toolbarMoreOpen, setToolbarMoreOpen] = useState(false);
 
@@ -94,7 +99,12 @@ function MindMapFlow({
 	//const selectNode = useMindMapStore((state) => state.selectNode);
 	const setActiveNodeId = useMindMapStore((state) => state.setActiveNodeId);
 
-	const { setCenter, getNode, fitView: fitViewToCanvas } = useReactFlow();
+	const {
+		setCenter,
+		getNode,
+		fitView: fitViewToCanvas,
+		screenToFlowPosition,
+	} = useReactFlow();
 
 	// Stable mode switch: update the ref synchronously so keyboard events never
 	// depend on a stale render or wait for the next effect registration.
@@ -104,10 +114,14 @@ function MindMapFlow({
 		if (nextMode === "resize") {
 			const state = useMindMapStore.getState();
 			state.setNodes(
-				state.nodes.map((node) => node.selected ? { ...node, selected: false } : node),
+				state.nodes.map((node) =>
+					node.selected ? { ...node, selected: false } : node,
+				),
 			);
 			state.setEdges(
-				state.edges.map((edge) => edge.selected ? { ...edge, selected: false } : edge),
+				state.edges.map((edge) =>
+					edge.selected ? { ...edge, selected: false } : edge,
+				),
 			);
 			state.setActiveNodeId(null);
 		}
@@ -116,12 +130,10 @@ function MindMapFlow({
 		setActiveMode(nextMode);
 	}, []);
 
-
 	const dragStartSnapshot = useRef<{
 		nodes: Node<MindMapNodeData>[];
 		edges: Edge[];
 	} | null>(null);
-
 
 	useEffect(() => {
 		function handleKeyboardShortcuts(event: globalThis.KeyboardEvent) {
@@ -344,7 +356,6 @@ function MindMapFlow({
 		};
 	}, [fitViewToCanvas, switchMode]);
 
-
 	useEffect(() => {
 		function handleMapLoaded(event: Event) {
 			const customEvent = event as CustomEvent<{
@@ -485,13 +496,61 @@ function MindMapFlow({
 		}));
 	}
 
+	function createNote() {
+		const canvas =
+			canvasRootRef.current?.querySelector<HTMLElement>(".react-flow");
+		const bounds = canvas?.getBoundingClientRect();
+		const screenX = bounds
+			? bounds.left + bounds.width / 2
+			: window.innerWidth / 2;
+		const screenY = bounds
+			? bounds.top + bounds.height / 2
+			: window.innerHeight / 2;
+		const center = screenToFlowPosition({ x: screenX, y: screenY });
+		const position = { x: center.x - 140, y: center.y - 105 };
+		const newNote: Node<MindMapNodeData> = {
+			id: `note-${crypto.randomUUID()}`,
+			type: "note",
+			position,
+			dragHandle: ".note-drag-handle",
+			style: { width: 300, height: 220 },
+			selected: true,
+			data: {
+				title: "",
+				description: "",
+				shape: "rectangle",
+				color: "cream",
+				parentId: null,
+				noteContent: "• ",
+				noteColor: "yellow",
+			},
+		};
+		const state = useMindMapStore.getState();
+		state.setNodes([
+			...state.nodes.map((node) => ({ ...node, selected: false })),
+			newNote,
+		]);
+		state.setActiveNodeId(null);
+		setToolbarMoreOpen(false);
+	}
+
 	function handleReconnect(oldEdge: Edge, newConnection: Connection) {
 		useMindMapStore.getState().reconnectEdge(oldEdge.id, newConnection);
 	}
 
 	return (
-		<div className="relative h-full w-full touch-none">
+		<div ref={canvasRootRef} className="relative h-full w-full touch-none">
 			<div className="mindmap-desktop-canvas-tools absolute left-4 top-4 z-10 flex gap-2">
+				<button
+					type="button"
+					onClick={createNote}
+					className="mindmap-sidebar-toggle rounded-lg border px-3 py-2 text-xs font-medium shadow-sm mindmap-canvas-tool"
+				>
+					<span className="flex items-center gap-2">
+						<StickyNote size={15} />
+						Add note
+					</span>
+				</button>
 				<button
 					type="button"
 					onClick={onGenerateFlashcards}
@@ -661,6 +720,10 @@ function MindMapFlow({
 				{/* Expandable secondary panel */}
 				{toolbarMoreOpen && (
 					<div className="mindmap-toolbar-secondary">
+						<button type="button" onClick={createNote}>
+							<StickyNote size={16} />
+							Add note
+						</button>
 						<button
 							type="button"
 							onClick={() => {
@@ -696,7 +759,6 @@ function MindMapFlow({
 							<GitBranch size={16} />
 							Sibling
 						</button>
-
 
 						<button
 							type="button"
@@ -741,48 +803,51 @@ function MindMapFlow({
 				</div>
 			)}
 			<MindMapModeContext.Provider value={resizeMode}>
-			<ReactFlow<Node<MindMapNodeData>>
-				minZoom={0.01}
-				maxZoom={4}
-				nodes={nodes}
-				edges={edges}
-				nodeTypes={nodeTypes}
-				deleteKeyCode={null}
-				onReconnect={handleReconnect} // reconnection of  arrrows
-				edgesReconnectable={true}
-				onConnect={handleConnect} // add connection
-				onNodesChange={handleNodesChange}
-				onEdgesChange={handleEdgesChange}
-				onNodeDragStart={handleNodeDragStart}
-				snapToGrid={snapEnabled}
-				snapGrid={gridSize}
-				// for tablet mode ===
-				panOnDrag={!selectionMode}
-				selectionOnDrag={selectionMode}
-				panOnScroll={false}
-				zoomOnPinch={true}
-				zoomOnDoubleClick={false}
-				// Keep elements selectable in Resize Mode so a node can be selected
-				// and its NodeResizer handles become visible. Only dragging is disabled.
-				nodesDraggable={!resizeMode}
-				nodesConnectable={!resizeMode}
-				// ===
-				onNodeDragStop={handleNodeDragStop}
-				multiSelectionKeyCode="Control"
-				onSelectionChange={({ nodes: selectedNodes }) => {
-					setActiveNodeId(selectedNodes[selectedNodes.length - 1]?.id ?? null);
-				}}
-				onPaneClick={() => {
-					setActiveNodeId(null);
-				}}
-				fitView={false}
-			>
-				{gridVisible && (
-					<Background gap={gridSize[0]} size={1} color="#be45ff" />
-				)}
-				<Controls />
-				<MiniMap nodeColor="#c77d9b" />
-			</ReactFlow>
+				<ReactFlow<Node<MindMapNodeData>>
+					minZoom={0.01}
+					maxZoom={4}
+					nodes={nodes}
+					edges={edges}
+					nodeTypes={nodeTypes}
+					deleteKeyCode={null}
+					onReconnect={handleReconnect} // reconnection of  arrrows
+					edgesReconnectable={true}
+					onConnect={handleConnect} // add connection
+					onNodesChange={handleNodesChange}
+					onEdgesChange={handleEdgesChange}
+					onNodeDragStart={handleNodeDragStart}
+					snapToGrid={snapEnabled}
+					snapGrid={gridSize}
+					// for tablet mode ===
+					panOnDrag={!selectionMode}
+					selectionOnDrag={selectionMode}
+					panOnScroll={false}
+					zoomOnPinch={true}
+					zoomOnDoubleClick={false}
+					// Keep elements selectable in Resize Mode so a node can be selected
+					// and its NodeResizer handles become visible. Only dragging is disabled.
+					nodesDraggable={!resizeMode}
+					nodesConnectable={!resizeMode}
+					// ===
+					onNodeDragStop={handleNodeDragStop}
+					multiSelectionKeyCode="Control"
+					onSelectionChange={({ nodes: selectedNodes }) => {
+						const activeMindMapNode = [...selectedNodes]
+							.reverse()
+							.find((node) => node.type !== "note");
+						setActiveNodeId(activeMindMapNode?.id ?? null);
+					}}
+					onPaneClick={() => {
+						setActiveNodeId(null);
+					}}
+					fitView={false}
+				>
+					{gridVisible && (
+						<Background gap={gridSize[0]} size={1} color="#be45ff" />
+					)}
+					<Controls />
+					<MiniMap nodeColor="#c77d9b" />
+				</ReactFlow>
 			</MindMapModeContext.Provider>
 		</div>
 	);
