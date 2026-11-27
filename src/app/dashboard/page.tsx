@@ -1752,59 +1752,65 @@ export default function DashboardPage() {
 						)}
 					</div>
 
-					{/* Subfolders */}
+					{/* Subject folders. At the root, this is the primary content section. */}
 
-					{currentFolders.length > 0 && (
+					{!selectedFolderId && (
 						<section className="mb-8">
 							<h2 className="mb-4 text-sm font-semibold text-[#6F527F]">
 								Folders
 							</h2>
 
-							<div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-								{currentFolders.map(renderFolderCard)}
-							</div>
+							{currentFolders.length > 0 ? (
+								<div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+									{currentFolders.map(renderFolderCard)}
+								</div>
+							) : (
+								<p className="rounded-xl bg-white p-4 text-sm text-[#887B91]">
+									No subjects yet. Create a folder to organize your mind maps.
+								</p>
+							)}
 						</section>
 					)}
 
-					{/* Maps in current folder */}
+					{selectedFolderId && (
+						<section>
+							<div className="mb-4 flex items-center justify-between">
+								<h2 className="text-sm font-semibold text-[#6F527F]">
+									Mind maps
+								</h2>
 
-					<section>
-						<div className="mb-4 flex items-center justify-between">
-							<h2 className="text-sm font-semibold text-[#6F527F]">
-								Mind maps
-							</h2>
-
-							<span className="text-xs text-[#887B91]">
-								{currentMaps.length} maps
-							</span>
-						</div>
-
-						{currentMaps.length > 0 ? (
-							<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-								{currentMaps.map(renderMapCard)}
+								<span className="text-xs text-[#887B91]">
+									{currentMaps.length} maps
+								</span>
 							</div>
-						) : (
-							<div className="rounded-2xl border border-dashed border-[#DCCBE8] bg-white p-8 text-center">
-								<BookOpen size={30} className="mx-auto text-[#9B7EBD]" />
 
-								<h3 className="mt-3 font-semibold text-[#6F527F]">
-									No mind maps in this folder
-								</h3>
+							{currentMaps.length > 0 ? (
+								<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+									{currentMaps.map(renderMapCard)}
+								</div>
+							) : (
+								<div className="rounded-2xl border border-dashed border-[#DCCBE8] bg-white p-8 text-center">
+									<BookOpen size={30} className="mx-auto text-[#9B7EBD]" />
 
-								<p className="mt-1 text-sm text-[#887B91]">
-									Create a mind map and assign it to this subject.
-								</p>
+									<h3 className="mt-3 font-semibold text-[#6F527F]">
+										No mind maps in this folder
+									</h3>
 
-								<button
-									type="button"
-									onClick={() => openCreateModal("map")}
-									className="mt-5 rounded-xl bg-[#9B7EBD] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#6F527F]"
-								>
-									Create mind map
-								</button>
-							</div>
-						)}
-					</section>
+									<p className="mt-1 text-sm text-[#887B91]">
+										Create a mind map and assign it to this subject.
+									</p>
+
+									<button
+										type="button"
+										onClick={() => openCreateModal("map")}
+										className="mt-5 rounded-xl bg-[#9B7EBD] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#6F527F]"
+									>
+										Create mind map
+									</button>
+								</div>
+							)}
+						</section>
+					)}
 
 					{/* Root-level uncategorized maps */}
 
@@ -1819,14 +1825,6 @@ export default function DashboardPage() {
 							</div>
 						</section>
 					)}
-
-					{currentFolders.length === 0 &&
-						currentMaps.length === 0 &&
-						!(!selectedFolderId && getMapsInFolder(null).length > 0) && (
-							<p className="mt-4 text-sm text-[#887B91]">
-								There is nothing here yet.
-							</p>
-						)}
 				</>
 			);
 		}

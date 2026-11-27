@@ -134,7 +134,7 @@ export default function Home() {
 				/>
 			</div>
 			<div className="fixed bottom-5 left-5 z-30 flex items-center gap-2 sm:bottom-7 sm:left-8 text-sm font-medium">
-				v1.8
+				v1.8.1
 			</div>
 			<div className="fixed bottom-5 right-5 z-30 flex items-center gap-2 sm:bottom-7 sm:right-8">
 				<button
@@ -354,6 +354,26 @@ export default function Home() {
 								<li>
 									Implement dark mode support and resizing functionality for the
 									Notepad.
+								</li>
+							</ul>
+						</section>
+
+						<section>
+							<h3 className="popup-section-heading font-bold">
+								Patch v1.8.1: Hotfixes
+							</h3>
+							<ul className="mt-2 list-disc space-y-1 pl-5">
+								<li>
+									Fixed a bug in the Notepad that caused random characters, such
+									as &nbsp, to appear in the text.
+								</li>
+								<li>
+									Fixed an arrow connection UI issue that occurred when
+									expanding a node's description or changing its size.
+								</li>
+								<li>
+									Fixed duplicate mind maps appearing in the All Subjects tab on
+									the Dashboard page.
 								</li>
 							</ul>
 						</section>
