@@ -15,6 +15,7 @@ import {
 	NodeResizer,
 	Position,
 	useReactFlow,
+	useUpdateNodeInternals,
 	type NodeProps,
 	type Node,
 } from "@xyflow/react";
@@ -77,6 +78,7 @@ export default function MindMapNode({
 	height,
 }: NodeProps<Node<MindMapNodeData>>) {
 	const { updateNodeData, getViewport } = useReactFlow();
+	const updateNodeInternals = useUpdateNodeInternals();
 	const resizeMode = useContext(MindMapModeContext);
 	const resizeSnapshotRef = useRef<{
 		nodes: Node<MindMapNodeData>[];
@@ -101,6 +103,31 @@ export default function MindMapNode({
 	const descriptionVisible = data.descriptionVisible ?? false;
 
 	const previousDescriptionVisibleRef = useRef(descriptionVisible);
+
+	// Keep React Flow's cached node/handle bounds synchronized with the actual
+	// rendered node size. This covers resizing and content changes (including
+	// opening/closing descriptions and expanding the description textarea).
+	useLayoutEffect(() => {
+		const element = nodeContentRef.current;
+		if (!element) return;
+
+		let frame = 0;
+		const scheduleHandleUpdate = () => {
+			if (frame) window.cancelAnimationFrame(frame);
+			frame = window.requestAnimationFrame(() => {
+				updateNodeInternals(id);
+			});
+		};
+
+		const observer = new ResizeObserver(scheduleHandleUpdate);
+		observer.observe(element);
+		scheduleHandleUpdate();
+
+		return () => {
+			observer.disconnect();
+			if (frame) window.cancelAnimationFrame(frame);
+		};
+	}, [id, updateNodeInternals]);
 
 	// Measure the rendered DOM after the description has expanded. React Flow's
 	// measured dimensions can still be stale on the first render after expansion.
