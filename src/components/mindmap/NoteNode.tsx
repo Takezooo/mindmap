@@ -66,17 +66,22 @@ const emptyFormats: ActiveFormats = {
 };
 
 function toEditorHtml(value: string) {
-	if (/<(p|div|br|ul|ol|li|strong|b|em|i|u)(\s|>|\/)/i.test(value)) {
+	// Preserve contentEditable HTML and already-encoded entities.
+	// Escaping these again causes visible strings such as "&amp;nbsp;".
+	if (
+		/<(p|div|br|ul|ol|li|strong|b|em|i|u)(\s|>|\/)/i.test(value) ||
+		/&(?:nbsp|amp|lt|gt|quot|apos|#\d+|#x[\da-f]+);/i.test(value)
+	) {
 		return value;
 	}
 
+	// Escape only plain text that has not already been HTML-serialized.
 	return value
 		.replace(/&/g, "&amp;")
 		.replace(/</g, "&lt;")
 		.replace(/>/g, "&gt;")
 		.replace(/\n/g, "<br>");
 }
-
 function getActiveFormats(): ActiveFormats {
 	return {
 		bold: document.queryCommandState("bold"),
